@@ -1,0 +1,2560 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#070707">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dental Zone">
+<title>Dental Zone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --ink:#f2ecd9;--ink-soft:#a9986b;--paper:#070707;--card:#141210;--line:#2b2619;
+    --teal:#d4af37;--teal-deep:#000000;--teal-soft:#241f10;
+    --gold:#d4af37;--gold-soft:#241f10;--rose:#e07a6c;--rose-soft:#2a1613;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--paper);color:var(--ink);font-family:'Tajawal',-apple-system,'Segoe UI',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+  #app{max-width:640px;margin:0 auto;padding-bottom:88px;}
+
+  .topbar{background:var(--teal-deep);color:#fff;padding:22px 20px 26px;border-bottom-left-radius:20px;border-bottom-right-radius:20px;}
+  .topbar-row{display:flex;align-items:center;gap:12px;}
+  .logo-mark{width:38px;height:38px;flex:none;border-radius:10px;overflow:hidden;background-image:url("data:image/webp;base64,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");background-size:cover;background-position:center;}
+  .brand{display:flex;flex-direction:column;line-height:1.15;}
+  .brand-en{font-weight:900;font-size:20px;letter-spacing:.2px;}
+  .brand-ar{font-weight:400;font-size:12.5px;color:rgba(255,255,255,.7);margin-top:2px;}
+  .topbar-sub{margin-top:16px;font-size:13.5px;color:rgba(255,255,255,.68);}
+  .topbar-tagline{margin-top:14px;font-size:11.5px;color:rgba(212,175,55,.8);line-height:1.7;}
+
+  .tabs{position:sticky;top:0;z-index:20;display:flex;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line);padding:0 6px;}
+  .tab-btn{flex:none;min-width:70px;border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink-soft);padding:14px 8px 12px;cursor:pointer;border-bottom:3px solid transparent;transition:color .15s;white-space:nowrap;}
+  .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal);}
+
+  .view{padding:18px 16px 6px;display:none;}
+  .view.active{display:block;}
+
+  h2.section-title{font-size:17px;font-weight:900;margin:4px 0 14px;color:var(--gold);}
+  h3.sub-title{font-size:13.5px;font-weight:900;color:var(--gold);margin:16px 0 10px;}
+
+  .period-row{display:flex;gap:8px;margin-bottom:16px;}
+  .period-row select{flex:1;}
+  .btn-export{flex:none;border:1px solid var(--gold);background:var(--gold-soft);color:var(--gold);border-radius:10px;padding:0 14px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px 12px;}
+  .stat-card.wide{grid-column:1 / -1;background:var(--teal-deep);border:1px solid var(--line);color:var(--gold);}
+  .stat-label{font-size:12.5px;color:var(--ink-soft);font-weight:500;}
+  .stat-card.wide .stat-label{color:rgba(212,175,55,.7);}
+  .stat-value{font-size:22px;font-weight:900;margin-top:6px;letter-spacing:.2px;}
+  .stat-card.wide .stat-value{font-size:28px;}
+  .stat-sub{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+
+  .fin-table{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:6px 16px;margin-bottom:16px;}
+  .fin-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .fin-row:last-child{border-bottom:none;}
+  .fin-row span{color:var(--ink-soft);}
+  .fin-row b{font-weight:900;color:var(--ink);}
+  .fin-row b.neg{color:var(--rose);}
+  .fin-row.total{background:var(--teal-soft);margin:0 -16px;padding:10px 16px;}
+  .fin-row.total span, .fin-row.total b{color:var(--gold);}
+  .fin-row.grand{background:var(--gold-soft);}
+  .fin-row.grand span, .fin-row.grand b{color:#7a5b16;}
+  .fin-row.pct b{color:var(--teal);}
+
+  .me-card{background:var(--gold-soft);border:1px solid #e3cd94;border-radius:var(--radius);padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .me-card .label{font-size:13px;color:#6b5217;font-weight:700;}
+  .me-card .value{font-size:26px;font-weight:900;color:#7a5b16;}
+  .me-card .pct{font-size:14px;color:#8a6a1e;margin-right:4px;}
+
+  .doc-row{padding:12px 0;border-bottom:1px solid var(--line);}
+  .doc-row:last-child{border-bottom:none;}
+  .doc-row-top{display:flex;align-items:center;gap:10px;}
+  .doc-name{flex:0 0 96px;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .doc-name.me::after{content:" (أنا)";color:var(--gold);font-weight:700;}
+  .doc-bar-track{flex:1;height:9px;background:var(--teal-soft);border-radius:6px;overflow:hidden;}
+  .doc-bar-fill{height:100%;background:var(--teal);border-radius:6px;}
+  .doc-row.is-me .doc-bar-fill{background:var(--gold);}
+  .doc-pct{flex:0 0 44px;text-align:left;font-size:13px;font-weight:700;color:var(--gold);}
+  .doc-sub{font-size:11.5px;color:var(--ink-soft);margin-top:5px;padding-right:106px;}
+  .doc-sub b{color:var(--gold);font-weight:700;}
+
+  .empty-note{text-align:center;color:var(--ink-soft);font-size:13.5px;padding:28px 10px;background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);}
+
+  .field{margin-bottom:13px;position:relative;}
+  .field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .field input, .field select{width:100%;font-family:inherit;font-size:15px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--teal);}
+  .field input.err{border-color:var(--rose);background:var(--rose-soft);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+  .patient-status{font-size:12px;font-weight:700;margin-top:5px;padding:6px 10px;border-radius:8px;display:none;}
+  .patient-status.existing{display:block;background:var(--teal-soft);color:var(--gold);}
+  .patient-status.new{display:block;background:var(--gold-soft);color:var(--gold);}
+  .field-error{font-size:11.5px;color:var(--rose);margin-top:4px;display:none;font-weight:700;}
+  .field-error.show{display:block;}
+
+  .edit-banner{display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--rose-soft);border:1px solid rgba(224,122,108,.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--rose);font-weight:700;}
+  .edit-banner button{border:none;background:none;color:var(--rose);font-weight:700;font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit;}
+
+  .calc-strip{display:flex;justify-content:space-between;align-items:center;background:var(--teal-soft);border-radius:10px;padding:12px 14px;margin:6px 0 16px;}
+  .calc-strip .k{font-size:13px;color:var(--gold);font-weight:700;}
+  .calc-strip .v{font-size:18px;color:var(--gold);font-weight:900;}
+  .calc-strip .v.owing{color:var(--rose);}
+
+  .btn-primary{width:100%;padding:14px;border:none;border-radius:11px;background:var(--teal);color:#0a0906;font-family:inherit;font-size:15.5px;font-weight:700;cursor:pointer;transition:background .15s;}
+  .btn-primary:active{background:var(--teal-deep);color:var(--gold);}
+  .btn-primary:disabled{background:#3a3527;color:#7c7460;cursor:not-allowed;}
+
+  .inline-add{display:flex;gap:8px;}
+  .inline-add input{flex:1;}
+  .btn-mini{flex:none;border:1px solid var(--gold);background:var(--card);color:var(--gold);border-radius:10px;padding:0 16px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;}
+  .btn-mini.gold{border-color:var(--gold);color:var(--gold);}
+
+  .search-row{margin-bottom:10px;}
+  .debt-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;}
+  .debt-toggle input{accent-color:var(--gold);}
+  .filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .filter-row select, .filter-row input{flex:1;min-width:110px;}
+  .record{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;}
+  .record-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .record-name{font-size:14.5px;font-weight:700;}
+  .record-date{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .record-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex:none;}
+  .badge-كشف{background:var(--teal-soft);color:var(--gold);}
+  .badge-اجراءات{background:var(--gold-soft);color:#e8c765;}
+  .badge-تركيبات{background:var(--rose-soft);color:var(--rose);}
+  .record-proc{font-size:13px;color:var(--ink-soft);margin-top:7px;}
+  .record-nums{display:flex;gap:14px;margin-top:8px;font-size:12.5px;flex-wrap:wrap;}
+  .record-nums span b{color:var(--ink);font-weight:700;}
+  .record-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;}
+  .record-doc{font-size:12px;color:var(--teal);font-weight:700;}
+  .record-actions{display:flex;gap:14px;}
+  .edit-btn, .del-btn, .print-btn{border:none;background:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;padding:4px 2px;}
+  .print-btn{color:var(--gold);}
+  .edit-btn{color:var(--teal);}
+  .del-btn{color:var(--rose);}
+
+  .doc-list-row{padding:13px 4px;border-bottom:1px solid var(--line);}
+  .doc-list-row:last-child{border-bottom:none;}
+  .doc-list-top{display:flex;align-items:center;justify-content:space-between;}
+  .doc-list-name{font-size:14.5px;font-weight:700;}
+  .rm-btn{border:none;background:none;color:var(--rose);font-size:16px;cursor:pointer;padding:0 6px;}
+  .doc-list-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:10px;}
+  .split-group{margin-top:12px;background:var(--paper);border-radius:10px;padding:10px 10px 12px;}
+  .split-title{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;}
+  .split-sum{font-weight:900;color:var(--teal);}
+  .split-sum.warn{color:var(--rose);}
+  .split-inputs{display:flex;gap:8px;}
+  .split-item{flex:1;text-align:center;}
+  .split-item label{display:block;font-size:10.5px;color:var(--ink-soft);margin-bottom:3px;font-weight:700;}
+  .split-item .split-input-wrap{display:flex;align-items:center;justify-content:center;gap:2px;border:1px solid var(--line);border-radius:8px;padding:5px 4px;background:var(--card);}
+  .split-item input{width:32px;border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--gold);text-align:center;padding:0;}
+  .split-item input:focus{outline:none;}
+  .split-item span{font-size:12px;color:var(--ink-soft);}
+  .adj-neg{color:var(--rose);font-weight:700;}
+  .adj-pos{color:var(--gold);font-weight:700;}
+
+  .patient-card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:9px;overflow:hidden;}
+  .patient-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;cursor:pointer;gap:8px;}
+  .patient-name{font-size:14.5px;font-weight:700;}
+  .patient-meta{font-size:11.5px;color:var(--ink-soft);margin-top:3px;}
+  .patient-totals{text-align:left;flex:none;}
+  .patient-totals .pv{font-size:15px;font-weight:900;color:var(--gold);}
+  .patient-totals .pl{font-size:10.5px;color:var(--ink-soft);}
+  .patient-body{display:none;padding:0 14px 14px;border-top:1px solid var(--line);}
+  .patient-body.open{display:block;}
+  .chev{font-size:12px;color:var(--ink-soft);transition:transform .15s;}
+  .chev.open{transform:rotate(180deg);}
+
+  /* Labs */
+  .lab-card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+  .lab-head{display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer;}
+  .lab-name{font-size:15px;font-weight:900;color:var(--gold);}
+  .lab-total{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .lab-body{display:none;padding:0 14px 16px;border-top:1px solid var(--line);}
+  .lab-body.open{display:block;}
+  .mini-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px;}
+  .mini-table th, .mini-table td{padding:7px 6px;text-align:right;border-bottom:1px solid var(--line);}
+  .mini-table th{color:var(--ink-soft);font-weight:700;font-size:11.5px;}
+  .mini-table tfoot td{font-weight:900;color:var(--gold);border-top:2px solid var(--teal-soft);border-bottom:none;}
+  .row-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;}
+
+  /* Compare */
+  .chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:16px;}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--teal-deep);color:#fff;font-size:13.5px;font-weight:700;padding:10px 20px;border-radius:30px;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s; z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  .import-drop{border:1.5px dashed var(--line);border-radius:var(--radius);background:var(--card);padding:22px 14px;text-align:center;margin-bottom:16px;}
+  .import-drop input[type=file]{display:block;margin:10px auto 0;font-size:13px;font-family:inherit;}
+  .import-drop .hint{font-size:12.5px;color:var(--ink-soft);}
+  .import-step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
+  .import-step h3{font-size:13.5px;font-weight:900;color:var(--gold);margin:0 0 10px;}
+  .map-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+  .map-row label{flex:0 0 118px;font-size:12.5px;font-weight:700;color:var(--ink-soft);}
+  .map-row select{flex:1;font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);}
+  .import-preview{overflow-x:auto;margin-top:8px;}
+  .import-preview table{border-collapse:collapse;width:100%;font-size:12px;}
+  .import-preview th, .import-preview td{border:1px solid var(--line);padding:6px 8px;white-space:nowrap;text-align:right;}
+  .import-preview th{background:var(--teal-soft);color:var(--gold);font-weight:700;}
+  .import-summary{font-size:12.5px;color:var(--ink-soft);margin-top:10px;text-align:center;}
+
+  ::selection{background:var(--gold-soft);}
+
+  #splashScreen{
+    position:fixed;inset:0;z-index:999;background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:opacity .5s ease, visibility .5s ease;
+  }
+  #splashScreen.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  .splash-logo{
+    width:170px;height:170px;border-radius:20px;
+    background-image:url("data:image/webp;base64,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");
+    background-size:cover;background-position:center;
+    box-shadow:0 0 40px rgba(212,175,55,.15);margin-bottom:16px;
+  }
+  .splash-title{color:var(--gold);font-size:26px;font-weight:900;letter-spacing:.3px;}
+  .splash-sub{color:var(--ink-soft);font-size:13px;margin-top:4px;}
+  .splash-credit{
+    position:absolute;bottom:34px;left:0;right:0;text-align:center;
+    color:var(--ink-soft);font-size:11px;line-height:1.9;
+  }
+  .splash-credit b{color:var(--gold);font-size:12.5px;}
+
+  #setupScreen{
+    display:none;position:fixed;inset:0;z-index:999;background:#000;
+    flex-direction:column;align-items:center;justify-content:center;padding:0 28px;text-align:center;
+  }
+  #setupScreen .splash-title{margin-top:2px;}
+  .setup-desc{color:var(--ink-soft);font-size:12.5px;line-height:1.8;margin:14px 0 20px;max-width:320px;}
+  #clinicCodeInput{
+    width:100%;max-width:280px;font-family:inherit;font-size:15px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);text-align:center;margin-bottom:14px;
+  }
+  #clinicCodeInput:focus{outline:none;border-color:var(--gold);}
+  #setupScreen .btn-primary{max-width:280px;}
+  .setup-hint{color:var(--ink-soft);font-size:11px;margin-top:16px;max-width:280px;line-height:1.7;}
+
+  .clinic-badge{
+    display:inline-flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:6px 14px;font-size:11.5px;color:var(--ink-soft);margin-bottom:18px;
+  }
+  .clinic-badge b{color:var(--gold);}
+  .clinic-badge button{border:none;background:none;color:var(--gold);font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline;}
+
+  #createManagerScreen, #loginScreen{
+    display:none;position:fixed;inset:0;z-index:999;background:#000;
+    flex-direction:column;align-items:center;justify-content:center;padding:0 28px;text-align:center;
+  }
+  #mgrNameInput, #mgrPinInput, #loginPinInput{
+    width:100%;max-width:280px;font-family:inherit;font-size:15px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);text-align:center;margin-bottom:12px;
+  }
+  #mgrNameInput:focus, #mgrPinInput:focus, #loginPinInput:focus{outline:none;border-color:var(--gold);}
+  #mgrCreateBtn, #loginPinBtn{max-width:280px;}
+  #loginUsersList{width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .login-user-btn{
+    width:100%;padding:13px;border:1px solid var(--line);background:var(--card);border-radius:12px;
+    color:var(--ink);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .login-user-btn:active{border-color:var(--gold);}
+  .login-user-role{font-size:11px;color:var(--gold);font-weight:700;background:rgba(212,175,55,.1);padding:3px 10px;border-radius:20px;}
+  #loginPinArea{margin-top:16px;}
+  .topbar-user{margin-top:12px;font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:8px;}
+  .topbar-user b{color:var(--gold);}
+  .topbar-user button{border:none;background:none;color:rgba(224,122,108,.9);font-size:11.5px;cursor:pointer;font-family:inherit;text-decoration:underline;}
+  .locked-note{text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 20px;}
+  .audit-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:12.5px;}
+  .audit-item .a-top{display:flex;justify-content:space-between;color:var(--ink-soft);font-size:11px;margin-bottom:4px;}
+  .audit-item .a-user{color:var(--gold);font-weight:700;}
+
+  /* Lab attachments */
+  .attach-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+  .attach-item{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
+  .attach-thumb{width:38px;height:38px;object-fit:cover;border-radius:6px;flex:none;}
+  .attach-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none;background:var(--card);border-radius:6px;}
+  .attach-name{flex:1;font-size:12px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .attach-view{font-size:11.5px;color:var(--gold);text-decoration:underline;flex:none;}
+  input[type=file]{color:var(--ink-soft);font-size:12.5px;font-family:inherit;margin-top:8px;}
+
+  /* Print receipt */
+  #printReceipt{display:none;}
+  @media print{
+    body *{ visibility:hidden; }
+    #printReceipt, #printReceipt *{ visibility:visible; }
+    #printReceipt{
+      display:block !important;position:absolute;top:0;left:0;width:100%;
+      padding:24px;background:#fff;color:#000;
+    }
+    .receipt-clinic{font-size:20px;font-weight:900;text-align:center;}
+    .receipt-sub{text-align:center;font-size:12px;color:#555;margin-bottom:16px;}
+    .receipt-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ddd;font-size:13px;}
+    .receipt-row b{font-weight:700;}
+    .receipt-row.total{font-weight:900;font-size:15px;border-top:2px solid #000;border-bottom:none;margin-top:8px;padding-top:10px;}
+    .receipt-divider{border-top:1px dashed #999;margin:10px 0;}
+    .receipt-footer{text-align:center;margin-top:24px;font-size:12px;color:#555;}
+  }
+
+  .app-footer{text-align:center;padding:30px 16px 16px;}
+  .footer-line{width:36px;height:2px;background:var(--gold);margin:0 auto 14px;border-radius:2px;opacity:.6;}
+  .app-footer p{margin:2px 0;color:var(--ink-soft);font-size:10.5px;line-height:1.7;}
+  .app-footer p.footer-name{color:var(--gold);font-weight:900;font-size:13px;margin-top:2px;}
+</style>
+</head>
+<body>
+<div id="splashScreen">
+  <div class="splash-logo">
+  </div>
+  <div class="splash-sub">إدارة حسابات العيادة</div>
+  <div class="splash-credit">
+    تطوير<br>
+    <b>د. أحمد عبدالله سعيد</b><br>
+    أخصائي طب وجراحة الفم والأسنان<br>
+    أخصائي مكافحة العدوى وإدارة المستشفيات
+  </div>
+</div>
+<div id="setupScreen">
+  <div class="splash-logo">
+  </div>
+  <div class="setup-desc">لعزل بيانات عيادتك عن أي عيادة تانية بتستخدم نفس التطبيق، اختار اسم أو كود مميز لعيادتك. احتفظ بيه عشان تدخل بيه من أي جهاز تاني في نفس العيادة.</div>
+  <input type="text" id="clinicCodeInput" placeholder="اسم أو كود عيادتك">
+  <button class="btn-primary" id="clinicEnterBtn">دخول</button>
+  <div class="setup-hint" id="cancelClinicSwitch" style="display:none;cursor:pointer;text-decoration:underline;">إلغاء والرجوع</div>
+  <div class="setup-hint">لو دي أول مرة، اكتب أي اسم مميز وهيتم إنشاء مساحة بيانات جديدة خاصة بيك تلقائيًا</div>
+</div>
+<div id="createManagerScreen">
+  <div class="splash-logo">
+  </div>
+  <div class="splash-title">إنشاء حساب المدير</div>
+  <div class="setup-desc">دي أول مرة يتفتح فيها التطبيق لعيادتك. اعمل حساب المدير الأساسي، وبعدين تقدر تضيف باقي الأطباء والاستقبال من تبويب "المستخدمون"</div>
+  <input type="text" id="mgrNameInput" placeholder="اسمك">
+  <input type="text" id="mgrPinInput" placeholder="رقم سري (٤ أرقام، اختياري)" maxlength="4" inputmode="numeric">
+  <button class="btn-primary" id="mgrCreateBtn">إنشاء الحساب والدخول</button>
+</div>
+<div id="loginScreen">
+  <div class="splash-logo">
+  </div>
+  <div class="splash-title">مين بيدخل؟</div>
+  <div class="setup-desc">اختار اسمك من القائمة</div>
+  <div id="loginUsersList"></div>
+  <div id="loginPinArea" style="display:none;">
+    <input type="text" id="loginPinInput" placeholder="الرقم السري" maxlength="4" inputmode="numeric">
+    <button class="btn-primary" id="loginPinBtn">دخول</button>
+    <div class="setup-hint" id="loginPinBack" style="cursor:pointer;text-decoration:underline;">رجوع لاختيار الاسم</div>
+  </div>
+</div>
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="logo-mark">
+      </div>
+      <div class="brand">
+        <span class="brand-en">Dental Zone</span>
+        <span class="brand-ar">إدارة حسابات العيادة</span>
+      </div>
+    </div>
+    <div class="topbar-tagline">برنامج متكامل لإدارة حسابات عيادات الأسنان — يحسب نسب الأطباء والمعامل تلقائيًا، ويساعدك تتابع اتجاه نمو العيادة شهرًا بعد شهر</div>
+    <div class="topbar-sub" id="topbarSub">جاري تحميل البيانات…</div>
+    <div class="topbar-user" id="topbarUser" style="display:none;"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-view="dash">الرئيسية</button>
+    <button class="tab-btn" data-view="add">إضافة</button>
+    <button class="tab-btn" data-view="records">السجل</button>
+    <button class="tab-btn" data-view="patients">المرضى</button>
+    <button class="tab-btn" data-view="doctors">الأطباء</button>
+    <button class="tab-btn" data-view="labs">المعامل</button>
+    <button class="tab-btn" data-view="prices">الأسعار</button>
+    <button class="tab-btn" data-view="compare">مقارنات</button>
+    <button class="tab-btn" data-view="import">استيراد</button>
+    <button class="tab-btn" data-view="users">المستخدمون</button>
+    <button class="tab-btn" data-view="audit">سجل النشاط</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view active" id="view-dash">
+    <h2 class="section-title">نظرة عامة</h2>
+    <div class="period-row">
+      <select id="periodSelect"></select>
+      <button class="btn-export" id="exportBtn">⬇ Excel</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card wide">
+        <div class="stat-label">إجمالي الدخل (المحصّل) في الفترة المحددة</div>
+        <div class="stat-value" id="statTotalIncome">٠ ج.م</div>
+        <div class="stat-sub" id="statTotalOutstanding"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">الكشف والتدخلات</div>
+        <div class="stat-value" id="statProcedures">٠</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">التركيبات (قبل المعمل)</div>
+        <div class="stat-value" id="statCrowns">٠</div>
+      </div>
+    </div>
+
+    <h3 class="sub-title">التحليل المالي للفترة</h3>
+    <div class="fin-table" id="finTable"></div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">إجمالي مستحقات الأطباء</div>
+        <div class="stat-value" id="statDoctorsShare">٠</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">نصيبي أنا</div>
+        <div class="stat-value" id="statMeShare">٠</div>
+      </div>
+      <div class="stat-card wide" style="background:var(--gold);color:#0a0906;">
+        <div class="stat-label" style="color:rgba(10,9,6,.65);">نصيب المستشفى</div>
+        <div class="stat-value" id="statHospitalShare">٠</div>
+      </div>
+    </div>
+
+    <h2 class="section-title">تفاصيل كل طبيب</h2>
+    <div id="doctorBreakdown"></div>
+  </div>
+
+  <!-- ADD / EDIT ENTRY -->
+  <div class="view" id="view-add">
+    <h2 class="section-title">إضافة عملية</h2>
+    <div class="edit-banner" id="editBanner">
+      <span>وضع التعديل: بتعدل عملية موجودة</span>
+      <button type="button" id="cancelEditBtn">إلغاء</button>
+    </div>
+    <form id="entryForm">
+      <div class="field">
+        <label>اسم المريض</label>
+        <input type="text" id="fPatient" required placeholder="اكتب اسم المريض" list="patientsDatalist" autocomplete="off">
+        <datalist id="patientsDatalist"></datalist>
+        <div class="patient-status" id="patientStatus"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>الرقم الطبي الموحد</label>
+          <input type="text" id="fMedNum" placeholder="مثال: 7556">
+        </div>
+        <div class="field">
+          <label>رقم الايصال</label>
+          <input type="text" id="fReceipt" placeholder="رقم الايصال">
+          <div class="field-error" id="receiptError">رقم الايصال ده مسجل قبل كده</div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>التاريخ</label>
+          <input type="date" id="fDate" required>
+        </div>
+        <div class="field">
+          <label>الطبيب المسؤول</label>
+          <select id="fDoctor" required></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>نوع الخدمة</label>
+        <select id="fType">
+          <option value="كشف">كشف</option>
+          <option value="اجراءات" selected>اجراءات</option>
+          <option value="تركيبات">تركيبات</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>اسم الاجراء / الخدمة</label>
+        <input type="text" id="fProc" required placeholder="مثال: حشو عصب، تلبيسة كراون…" list="servicesDatalist" autocomplete="off">
+        <datalist id="servicesDatalist"></datalist>
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>القيمة (ج.م)</label>
+          <input type="number" step="0.01" min="0" id="fValue" required placeholder="٠">
+        </div>
+        <div class="field">
+          <label>الخصم (ج.م)</label>
+          <input type="number" step="0.01" min="0" id="fDiscount" placeholder="٠">
+        </div>
+        <div class="field">
+          <label>المدفوع (ج.م)</label>
+          <input type="number" step="0.01" min="0" id="fPaid" required placeholder="٠">
+        </div>
+      </div>
+      <div class="calc-strip">
+        <span class="k">المتبقي</span>
+        <span class="v owing" id="remainingDisplay">٠ ج.م</span>
+      </div>
+      <button type="submit" class="btn-primary" id="submitBtn">حفظ العملية</button>
+    </form>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="view" id="view-records">
+    <h2 class="section-title">سجل العمليات</h2>
+    <div class="search-row">
+      <input type="text" id="recordSearch" placeholder="ابحث باسم المريض أو الطبيب أو رقم الايصال">
+    </div>
+    <div class="filter-row">
+      <select id="filterDoctor"><option value="">كل الأطباء</option></select>
+      <select id="filterType">
+        <option value="">كل الأنواع</option>
+        <option value="كشف">كشف</option>
+        <option value="اجراءات">اجراءات</option>
+        <option value="تركيبات">تركيبات</option>
+      </select>
+      <input type="date" id="filterDate">
+    </div>
+    <div id="recordsList"></div>
+  </div>
+
+  <!-- PATIENTS -->
+  <div class="view" id="view-patients">
+    <h2 class="section-title">قاعدة بيانات المرضى</h2>
+    <div class="search-row">
+      <input type="text" id="patientSearch" placeholder="ابحث باسم المريض">
+    </div>
+    <label class="debt-toggle">
+      <input type="checkbox" id="debtOnlyToggle">
+      إظهار أصحاب المديونيات فقط (اللي عندهم متبقي)
+    </label>
+    <div id="patientsList"></div>
+  </div>
+
+  <!-- DOCTORS -->
+  <div class="view" id="view-doctors">
+    <h2 class="section-title">الأطباء</h2>
+    <div class="field">
+      <label>إضافة طبيب جديد</label>
+      <div class="inline-add">
+        <input type="text" id="newDoctorName" placeholder="اسم الطبيب">
+        <button class="btn-mini" id="addDoctorBtn">إضافة</button>
+      </div>
+    </div>
+    <h2 class="section-title" style="margin-top:20px;">توزيع الدخل لكل طبيب</h2>
+    <div class="stat-sub" style="margin-bottom:8px;">لكل طبيب نسبة توزيع مستقلة لبند الكشف والتدخلات، ونسبة توزيع مستقلة لبند التركيبات (بعد خصم المعمل) — بين الطبيب نفسه، أنا، والمستشفى. المفروض كل مجموعة تجمع ١٠٠٪</div>
+    <div id="doctorsList"></div>
+  </div>
+
+  <!-- LABS -->
+  <div class="view" id="view-labs">
+    <h2 class="section-title">المعامل</h2>
+    <div class="stat-sub" style="margin-bottom:12px;">تكلفة كل معمل بتتجمع وتتخصم من دخل التركيبات في الرئيسية</div>
+    <div class="field">
+      <label>إضافة معمل جديد</label>
+      <div class="inline-add">
+        <input type="text" id="newLabName" placeholder="اسم المعمل">
+        <button class="btn-mini" id="addLabBtn">إضافة</button>
+      </div>
+    </div>
+    <div id="labsList"></div>
+  </div>
+
+  <!-- PRICES -->
+  <div class="view" id="view-prices">
+    <h2 class="section-title">قوائم أسعار الخدمات</h2>
+    <div class="stat-sub" style="margin-bottom:12px;">هتظهر كاقتراح تلقائي لما تكتب اسم الاجراء في صفحة الإضافة، وهتملى القيمة والنوع أوتوماتيك</div>
+    <div class="import-step">
+      <h3>إضافة خدمة جديدة</h3>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="newServiceName" placeholder="اسم الخدمة"></div>
+        <div class="field" style="margin-bottom:8px;">
+          <select id="newServiceType">
+            <option value="كشف">كشف</option>
+            <option value="اجراءات" selected>اجراءات</option>
+            <option value="تركيبات">تركيبات</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="newServicePrice" placeholder="السعر"></div>
+      </div>
+      <button class="btn-mini" id="addServiceBtn" style="width:100%;">إضافة للقائمة</button>
+    </div>
+    <div class="import-step">
+      <h3>استيراد قائمة كاملة من Excel</h3>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="file" id="servicesImportFile" accept=".xlsx,.xls"></div>
+        <div class="field" style="margin-bottom:8px;">
+          <select id="servicesImportDefaultType">
+            <option value="اجراءات">النوع الافتراضي: اجراءات</option>
+            <option value="كشف">النوع الافتراضي: كشف</option>
+            <option value="تركيبات">النوع الافتراضي: تركيبات</option>
+          </select>
+        </div>
+      </div>
+      <div class="stat-sub">لو الملف فيه عمود "النوع" هيتعرف عليه تلقائيًا، غير كده هيستخدم النوع الافتراضي المختار</div>
+    </div>
+    <div id="servicesList"></div>
+  </div>
+
+  <!-- COMPARE -->
+  <div class="view" id="view-compare">
+    <h2 class="section-title">مقارنة الدخل بين الفترات</h2>
+    <div class="filter-row">
+      <select id="compareRange">
+        <option value="3">آخر 3 فترات</option>
+        <option value="6">آخر 6 فترات</option>
+        <option value="12">آخر سنة (12 فترة)</option>
+        <option value="custom">قارن مع فترة محددة</option>
+      </select>
+      <select id="compareCustom" style="display:none;"></select>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="compareChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- IMPORT -->
+  <div class="view" id="view-import">
+    <h2 class="section-title">استيراد بيانات من ملف Excel</h2>
+    <div class="import-drop">
+      <div class="hint">ارفع ملف الشهر السابق (.xlsx) عشان تكمل عليه في التطبيق</div>
+      <input type="file" id="importFile" accept=".xlsx,.xls">
+    </div>
+
+    <div id="importMapArea" style="display:none;">
+      <div class="import-step">
+        <h3>1) اختر الشيت</h3>
+        <div class="map-row"><label>ورقة العمل</label><select id="importSheet"></select></div>
+      </div>
+      <div class="import-step">
+        <h3>2) اربط الأعمدة</h3>
+        <div class="map-row"><label>التاريخ</label><select id="mapDate"></select></div>
+        <div class="map-row"><label>اسم المريض</label><select id="mapPatient"></select></div>
+        <div class="map-row"><label>رقم الايصال</label><select id="mapReceipt"></select></div>
+        <div class="map-row"><label>نوع/اسم الاجراء</label><select id="mapProc"></select></div>
+        <div class="map-row"><label>القيمة (اختياري)</label><select id="mapValue"></select></div>
+        <div class="map-row"><label>المدفوع</label><select id="mapPaid"></select></div>
+        <div class="map-row"><label>المتبقي (اختياري)</label><select id="mapRemaining"></select></div>
+      </div>
+      <div class="import-step">
+        <h3>3) الطبيب</h3>
+        <div class="stat-sub" style="margin-bottom:8px;">الملف مش بيحدد الطبيب لكل ايصال، فحدد الطبيب اللي هتنسب له كل صفوف هذا الاستيراد</div>
+        <div class="map-row"><label>تعيين لـ</label><select id="mapDoctor"></select></div>
+      </div>
+      <div class="import-step">
+        <h3>معاينة</h3>
+        <div class="import-preview" id="importPreview"></div>
+        <div class="import-summary" id="importCount"></div>
+      </div>
+      <button class="btn-primary" id="importDoBtn">استيراد البيانات</button>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="view" id="view-users">
+    <h2 class="section-title">المستخدمون والصلاحيات</h2>
+    <div class="import-step">
+      <h3>اسم العيادة (يظهر في الإيصال المطبوع)</h3>
+      <div class="inline-add">
+        <input type="text" id="clinicNameInput" placeholder="مثال: عيادة د. أحمد عبدالله">
+        <button class="btn-mini" id="saveClinicNameBtn">حفظ</button>
+      </div>
+    </div>
+    <div class="import-step">
+      <h3>نسخة احتياطية كاملة</h3>
+      <div class="stat-sub" style="margin-bottom:10px;">حمّل نسخة كاملة من كل بيانات العيادة (العمليات، المرضى، الأطباء، المعامل، الأسعار) عشان تكون في أمان. تقدر تستعيدها في أي وقت لو حصل خطأ.</div>
+      <button class="btn-mini" id="backupBtn" style="width:100%;margin-bottom:10px;">⬇ تنزيل نسخة احتياطية (JSON)</button>
+      <input type="file" id="restoreFile" accept=".json">
+      <div class="stat-sub" style="margin-top:6px;">استعادة نسخة هتستبدل كل البيانات الحالية لهذه العيادة</div>
+    </div>
+    <div class="stat-sub" style="margin-bottom:12px;">حدد لكل شخص دور (مدير / طبيب / استقبال) ورقم سري اختياري. لو حددت دور "طبيب" اربطه باسمه في قائمة الأطباء عشان يشوف بياناته بس.</div>
+    <div class="import-step">
+      <h3>إضافة مستخدم جديد</h3>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="newUserName" placeholder="الاسم"></div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;">
+          <select id="newUserRole">
+            <option value="manager">مدير (صلاحية كاملة)</option>
+            <option value="doctor">طبيب</option>
+            <option value="reception">استقبال</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="newUserPin" placeholder="رقم سري (٤ أرقام، اختياري)" maxlength="4" inputmode="numeric"></div>
+      </div>
+      <div class="field" id="newUserLinkWrap" style="display:none;margin-bottom:8px;">
+        <select id="newUserLinkDoctor"><option value="">اربط باسم طبيب (اختياري)</option></select>
+      </div>
+      <button class="btn-mini" id="addUserBtn" style="width:100%;">إضافة المستخدم</button>
+    </div>
+    <div id="usersList"></div>
+  </div>
+
+  <!-- AUDIT LOG -->
+  <div class="view" id="view-audit">
+    <h2 class="section-title">سجل النشاط</h2>
+    <div class="stat-sub" style="margin-bottom:12px;">آخر العمليات الحساسة (حذف، تعديل نسب، مستخدمين) مع اسم من نفذها ووقتها. للمراجعة فقط.</div>
+    <div id="auditList"></div>
+  </div>
+
+  <div class="app-footer">
+    <div class="clinic-badge">
+      <span>كود العيادة: <b id="clinicCodeDisplay"></b></span>
+      <button id="switchClinicBtn">تغيير</button>
+    </div>
+    <div class="footer-line"></div>
+    <p>تم إنشاء وتطوير هذا التطبيق بواسطة</p>
+    <p class="footer-name">د. أحمد عبدالله سعيد</p>
+    <p>أخصائي طب وجراحة الفم والأسنان</p>
+    <p>أخصائي مكافحة العدوى وإدارة المستشفيات</p>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printReceipt"><div id="printReceiptContent"></div></div>
+
+<script>
+/* ============================================================
+   FIREBASE SETUP — عدّل القيم دي من إعدادات مشروعك على Firebase
+   (Firebase Console → Project settings → عادةً تحت "Your apps")
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const __db = firebase.firestore();
+
+/* ------------------------------------------------------------
+   Storage shim: يخلي التطبيق (اللي بنى أصلاً على window.storage
+   بتاع كلود) يشتغل بره كلود من غير ما نلمس أي سطر تاني في الكود.
+   - shared:false (بيانات شخصية زي "كود عيادتي") → localStorage
+   - shared:true  (بيانات العيادة) → Firestore
+   بيقسم أي قيمة كبيرة (زي مرفقات المعامل) لأجزاء صغيرة تلقائيًا
+   عشان يفضل جوه حد Firestore (تقريبًا 1 ميجا لكل مستند).
+   ------------------------------------------------------------ */
+window.__firestoreClinicId = '';
+(function(){
+  const CHUNK_LIMIT = 700000;
+
+  function kvDoc(key){
+    return __db.collection('clinics').doc(window.__firestoreClinicId).collection('kv').doc(key);
+  }
+  function chunkDoc(key, i){
+    return __db.collection('clinics').doc(window.__firestoreClinicId).collection('kv').doc(key+'__chunk_'+i);
+  }
+
+  window.storage = {
+    async get(key, shared){
+      if(!shared){
+        const v = localStorage.getItem(key);
+        return v!==null ? { key, value:v, shared:false } : null;
+      }
+      const snap = await kvDoc(key).get();
+      if(!snap.exists) return null;
+      const data = snap.data();
+      if(!data.chunked) return { key, value: data.value, shared:true };
+      const parts = [];
+      for(let i=0;i<data.chunkCount;i++){
+        const cs = await chunkDoc(key,i).get();
+        parts.push(cs.exists ? cs.data().part : '');
+      }
+      return { key, value: parts.join(''), shared:true };
+    },
+    async set(key, value, shared){
+      if(!shared){
+        localStorage.setItem(key, value);
+        return { key, value, shared:false };
+      }
+      if(value.length <= CHUNK_LIMIT){
+        await kvDoc(key).set({ chunked:false, value });
+      } else {
+        const chunks = [];
+        for(let i=0;i<value.length;i+=CHUNK_LIMIT) chunks.push(value.slice(i,i+CHUNK_LIMIT));
+        await kvDoc(key).set({ chunked:true, chunkCount:chunks.length });
+        await Promise.all(chunks.map((part,i)=>chunkDoc(key,i).set({ part })));
+      }
+      return { key, value, shared:true };
+    },
+    async delete(key, shared){
+      if(!shared){ localStorage.removeItem(key); return { key, deleted:true, shared:false }; }
+      await kvDoc(key).delete();
+      return { key, deleted:true, shared:true };
+    },
+    async list(){ return { keys: [] }; }
+  };
+})();
+</script>
+
+<script>
+(function(){
+  const SHARED = true;
+  const PERSONAL_KEY = 'dz-my-clinic-code';
+  let clinicCode = '';
+  let K = {};
+  function buildKeys(){
+    window.__firestoreClinicId = clinicCode;
+    K = {
+      entries:`dz-${clinicCode}-entries`, doctors:`dz-${clinicCode}-doctors`, patients:`dz-${clinicCode}-patients`,
+      settings:`dz-${clinicCode}-settings`, labs:`dz-${clinicCode}-labs`, services:`dz-${clinicCode}-services`,
+      adjustments:`dz-${clinicCode}-adjustments`, users:`dz-${clinicCode}-users`, audit:`dz-${clinicCode}-audit`
+    };
+  }
+  function sanitizeClinicCode(raw){
+    return (raw||'').toString().trim().replace(/['"\\\/]/g,'').replace(/\s+/g,'-').slice(0,60);
+  }
+  async function sha256(text){
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال' };
+  const ROLE_TABS = {
+    manager: ['dash','add','records','patients','doctors','labs','prices','compare','import','users','audit'],
+    doctor: ['dash','add','records','patients','compare'],
+    reception: ['add','records','patients']
+  };
+  let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
+  let currentUser = null;  // {id, name, role, pin, linkedDoctor}
+  let auditLog = [];       // [{ts, user, role, action}]
+
+  function canManageEntry(e){
+    if(!currentUser) return false;
+    if(currentUser.role==='manager') return true;
+    if(currentUser.role==='doctor') return currentUser.linkedDoctor && e.doctor===currentUser.linkedDoctor;
+    return false;
+  }
+  function allowedTabs(){ return currentUser ? (ROLE_TABS[currentUser.role]||[]) : []; }
+
+  async function logAction(action){
+    auditLog.unshift({ ts: new Date().toISOString(), user: currentUser?currentUser.name:'—', role: currentUser?currentUser.role:'', action });
+    if(auditLog.length>300) auditLog = auditLog.slice(0,300);
+    try{ await window.storage.set(K.audit, JSON.stringify(auditLog), SHARED); }catch(e){ console.error(e); }
+  }
+
+  let inactivityTimer = null;
+  function resetInactivityTimer(){
+    if(inactivityTimer) clearTimeout(inactivityTimer);
+    if(!currentUser) return;
+    inactivityTimer = setTimeout(()=>{
+      logAction('خروج تلقائي بعد فترة خمول');
+      logout();
+      toast('تم تسجيل الخروج تلقائيًا لعدم النشاط');
+    }, 15*60*1000);
+  }
+  ['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev, resetInactivityTimer));
+
+  let entries = [];
+  let doctors = [];       // [{name, splits:{checkup:{doctor,me,hospital}, crown:{doctor,me,hospital}}}]
+  let patients = [];      // [{id, name, medNum, createdAt}]
+  let settings = { me:'' };
+  let labsData = { labs:[], items:[], work:[] }; // labs:[{id,name}] items:[{id,labId,name,price}] work:[{id,labId,date,patient,itemId,itemName,qty,unitPrice,total,discPct}]
+  let services = [];      // [{id,name,type,price}]
+  let adjustments = [];   // [{id, doctorName, date, amount, note}]
+
+  let editingId = null;
+  let selectedPeriod = null;
+  let expandedPatients = new Set();
+  let expandedLabs = new Set();
+  let compareChartObj = null;
+
+  const MONTHS_AR = ['يناير','فبراير','مارس','ابريل','مايو','يونيو','يوليو','اغسطس','سبتمبر','اكتوبر','نوفمبر','ديسمبر'];
+
+  const fmt = n => (Math.round((n||0)*100)/100).toLocaleString('en-US');
+  const genId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const norm = s => (s||'').toString().trim().replace(/\s+/g,' ').toLowerCase();
+  const escapeHtml = s => (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const doctorNames = () => doctors.map(d=>d.name);
+  const defaultSplits = () => ({ checkup:{doctor:0,me:0,hospital:100}, crown:{doctor:0,me:0,hospital:100} });
+  function getSplits(name){
+    const d = doctors.find(d=>d.name===name);
+    return d && d.splits ? d.splits : defaultSplits();
+  }
+
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  // ---------- Accounting period (21st -> 20th of next month) ----------
+  function periodKeyForDate(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    let year = d.getFullYear(), month = d.getMonth();
+    if(d.getDate() < 21){ month -= 1; if(month < 0){ month = 11; year -= 1; } }
+    return year + '-' + String(month+1).padStart(2,'0');
+  }
+  function currentPeriodKey(){
+    const t = new Date();
+    return periodKeyForDate(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'));
+  }
+  function periodLabel(key){
+    if(key.startsWith('year:')){ const y=Number(key.slice(5)); return `السنة المحاسبية ${y} (21 يناير ${y} – 20 يناير ${y+1})`; }
+    const [y,m] = key.split('-').map(Number);
+    let endMonth = m+1, endYear = y;
+    if(endMonth>12){ endMonth=1; endYear+=1; }
+    return `21 ${MONTHS_AR[m-1]} – 20 ${MONTHS_AR[endMonth-1]} ${endYear}`;
+  }
+  function shiftPeriodKey(key, delta){
+    let [y,m] = key.split('-').map(Number);
+    let idx = (y*12 + (m-1)) + delta;
+    const ny = Math.floor(idx/12), nm = (idx%12)+1;
+    return ny + '-' + String(nm).padStart(2,'0');
+  }
+  function entriesInPeriod(key){
+    if(key==='all') return entries;
+    if(key.startsWith('year:')){ const y=key.slice(5); return entries.filter(e=>periodKeyForDate(e.date).startsWith(y+'-')); }
+    return entries.filter(e => periodKeyForDate(e.date) === key);
+  }
+  function labWorkInPeriod(key){
+    if(key==='all') return labsData.work;
+    if(key.startsWith('year:')){ const y=key.slice(5); return labsData.work.filter(w=>periodKeyForDate(w.date).startsWith(y+'-')); }
+    return labsData.work.filter(w => periodKeyForDate(w.date) === key);
+  }
+  function adjustmentsInPeriod(key){
+    if(key==='all') return adjustments;
+    if(key.startsWith('year:')){ const y=key.slice(5); return adjustments.filter(a=>periodKeyForDate(a.date).startsWith(y+'-')); }
+    return adjustments.filter(a => periodKeyForDate(a.date) === key);
+  }
+
+  async function loadAll(){
+    document.getElementById('topbarSub').textContent = 'جاري تحميل البيانات…';
+    const cd = document.getElementById('clinicCodeDisplay');
+    if(cd) cd.textContent = clinicCode;
+    try{ const r = await window.storage.get(K.entries, SHARED); entries = r ? JSON.parse(r.value) : []; }catch(e){ entries = []; }
+    try{
+      const r = await window.storage.get(K.doctors, SHARED);
+      const raw = r ? JSON.parse(r.value) : [];
+      doctors = raw.map(d => {
+        if(typeof d === 'string') return { name: d, splits: defaultSplits() };
+        if(d.splits) return { name: d.name, splits: d.splits };
+        // migrate old flat "pct" commission field
+        const oldPct = Number(d.pct)||0;
+        return { name: d.name, splits: {
+          checkup: { doctor: oldPct, me: 0, hospital: 100-oldPct },
+          crown: { doctor: oldPct, me: 0, hospital: 100-oldPct }
+        }};
+      });
+    }catch(e){ doctors = []; }
+    try{ const r = await window.storage.get(K.patients, SHARED); patients = r ? JSON.parse(r.value) : []; }catch(e){ patients = []; }
+    try{ const r = await window.storage.get(K.settings, SHARED); settings = r ? JSON.parse(r.value) : { me:'' }; }catch(e){ settings = { me:'' }; }
+    try{ const r = await window.storage.get(K.labs, SHARED); labsData = r ? JSON.parse(r.value) : { labs:[], items:[], work:[] }; }catch(e){ labsData = { labs:[], items:[], work:[] }; }
+    try{ const r = await window.storage.get(K.services, SHARED); services = r ? JSON.parse(r.value) : []; }catch(e){ services = []; }
+    try{ const r = await window.storage.get(K.adjustments, SHARED); adjustments = r ? JSON.parse(r.value) : []; }catch(e){ adjustments = []; }
+    try{ const r = await window.storage.get(K.audit, SHARED); auditLog = r ? JSON.parse(r.value) : []; }catch(e){ auditLog = []; }
+    document.getElementById('topbarSub').textContent = entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية';
+
+    selectedPeriod = currentPeriodKey();
+    renderPeriodSelect();
+    renderDoctorSelects();
+    rebuildPatientDatalist();
+    rebuildServicesDatalist();
+    renderDashboard();
+    renderRecords();
+    renderPatients();
+    renderDoctorsSettings();
+    renderLabs();
+    renderServices();
+    renderCompareRangeOptions();
+    renderCompareChart();
+
+    setTimeout(()=>{
+      const splash = document.getElementById('splashScreen');
+      if(splash) splash.classList.add('hide');
+    }, 900);
+  }
+
+  async function saveEntries(){ try{ await window.storage.set(K.entries, JSON.stringify(entries), SHARED); }catch(e){ console.error(e); toast('تعذر الحفظ، حاول مرة أخرى'); } }
+  async function saveDoctors(){ try{ await window.storage.set(K.doctors, JSON.stringify(doctors), SHARED); }catch(e){ console.error(e); } }
+  async function savePatients(){ try{ await window.storage.set(K.patients, JSON.stringify(patients), SHARED); }catch(e){ console.error(e); } }
+  async function saveSettings(){ try{ await window.storage.set(K.settings, JSON.stringify(settings), SHARED); }catch(e){ console.error(e); } }
+  async function saveLabs(){ try{ await window.storage.set(K.labs, JSON.stringify(labsData), SHARED); return true; }catch(e){ console.error(e); toast('تعذر الحفظ، الحجم الكلي كبير جدًا'); return false; } }
+  async function saveServices(){ try{ await window.storage.set(K.services, JSON.stringify(services), SHARED); }catch(e){ console.error(e); } }
+  async function saveAdjustments(){ try{ await window.storage.set(K.adjustments, JSON.stringify(adjustments), SHARED); }catch(e){ console.error(e); } }
+  async function saveUsers(){ try{ await window.storage.set(K.users, JSON.stringify(users), SHARED); }catch(e){ console.error(e); } }
+
+  // ---------- Tabs ----------
+  function switchTab(name){
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+name));
+    if(name==='dash') renderDashboard();
+    if(name==='records') renderRecords();
+    if(name==='patients') renderPatients();
+    if(name==='labs') renderLabs();
+    if(name==='prices') renderServices();
+    if(name==='compare') renderCompareChart();
+    if(name==='users') renderUsers();
+    if(name==='audit') renderAuditLog();
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click', ()=>switchTab(btn.dataset.view)));
+
+  // ---------- Period select ----------
+  function renderPeriodSelect(){
+    const sel = document.getElementById('periodSelect');
+    const keys = new Set([currentPeriodKey()]);
+    entries.forEach(e=>keys.add(periodKeyForDate(e.date)));
+    const sorted = Array.from(keys).sort().reverse();
+    const years = Array.from(new Set(sorted.map(k=>k.split('-')[0]))).sort().reverse();
+    const yearOptions = years.map(y=>`<option value="year:${y}">📅 السنة المحاسبية ${y}</option>`).join('');
+    sel.innerHTML = '<option value="all">كل الفترات</option>' + yearOptions + sorted.map(k=>`<option value="${k}">${periodLabel(k)}</option>`).join('');
+    sel.value = selectedPeriod;
+  }
+  document.getElementById('periodSelect').addEventListener('change', function(){ selectedPeriod = this.value; renderDashboard(); });
+
+  // ---------- Doctor selects ----------
+  function renderDoctorSelects(){
+    const fDoctor = document.getElementById('fDoctor');
+    const filterDoctor = document.getElementById('filterDoctor');
+    const prevFDoctor = fDoctor.value, prevFilter = filterDoctor.value;
+    const names = doctorNames();
+    fDoctor.innerHTML = names.length ? '' : '<option value="">أضف طبيبًا أولاً</option>';
+    filterDoctor.innerHTML = '<option value="">كل الأطباء</option>';
+    names.forEach(name=>{
+      fDoctor.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+      filterDoctor.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+    });
+    if(names.includes(prevFDoctor)) fDoctor.value = prevFDoctor;
+    if(names.includes(prevFilter)) filterDoctor.value = prevFilter;
+  }
+
+  // ---------- Patient datalist + status ----------
+  function rebuildPatientDatalist(){
+    const dl = document.getElementById('patientsDatalist');
+    dl.innerHTML = patients.map(p=>`<option value="${escapeHtml(p.name)}">`).join('');
+  }
+  function updatePatientStatus(){
+    const name = document.getElementById('fPatient').value.trim();
+    const el = document.getElementById('patientStatus');
+    if(!name){ el.className = 'patient-status'; el.textContent=''; return; }
+    const p = patients.find(p=>norm(p.name)===norm(name));
+    if(p){
+      const visits = entries.filter(e=>e.patientId===p.id).length;
+      el.className = 'patient-status existing';
+      el.textContent = `✅ مريض حالي — استكمال إجراءات (${visits} إيصال سابق)`;
+    } else {
+      el.className = 'patient-status new';
+      el.textContent = '🆕 مريض جديد';
+    }
+  }
+  document.getElementById('fPatient').addEventListener('input', updatePatientStatus);
+
+  // ---------- Services datalist + autofill ----------
+  function rebuildServicesDatalist(){
+    const dl = document.getElementById('servicesDatalist');
+    dl.innerHTML = services.map(s=>`<option value="${escapeHtml(s.name)}">`).join('');
+  }
+  document.getElementById('fProc').addEventListener('input', function(){
+    const s = services.find(s=>norm(s.name)===norm(this.value));
+    if(s){
+      document.getElementById('fValue').value = s.price;
+      document.getElementById('fType').value = s.type;
+      updateRemaining();
+    }
+  });
+
+  // ---------- Patient matching ----------
+  function findOrCreatePatient(name, medNum){
+    const key = norm(name);
+    let p = patients.find(p => norm(p.name) === key);
+    if(!p){
+      p = { id: genId(), name: name.trim(), medNum: (medNum||'').trim(), createdAt: new Date().toISOString() };
+      patients.push(p);
+    } else if(medNum && medNum.trim() && !p.medNum){
+      p.medNum = medNum.trim();
+    }
+    return p;
+  }
+
+  // ---------- Add / edit entry form ----------
+  const fValue = document.getElementById('fValue');
+  const fDiscount = document.getElementById('fDiscount');
+  const fPaid = document.getElementById('fPaid');
+  function updateRemaining(){
+    const v = parseFloat(fValue.value)||0, disc = parseFloat(fDiscount.value)||0, p = parseFloat(fPaid.value)||0;
+    const r = v - disc - p;
+    const el = document.getElementById('remainingDisplay');
+    el.textContent = fmt(r) + ' ج.م';
+    el.classList.toggle('owing', r>0);
+  }
+  fValue.addEventListener('input', updateRemaining);
+  fDiscount.addEventListener('input', updateRemaining);
+  fPaid.addEventListener('input', updateRemaining);
+  document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+
+  function checkReceiptDuplicate(){
+    const receipt = document.getElementById('fReceipt').value.trim();
+    const errEl = document.getElementById('receiptError');
+    const inputEl = document.getElementById('fReceipt');
+    if(!receipt){ errEl.classList.remove('show'); inputEl.classList.remove('err'); return true; }
+    const dup = entries.find(e => norm(e.receipt)===norm(receipt) && e.id!==editingId);
+    if(dup){
+      errEl.textContent = `رقم الايصال ده مسجل قبل كده لـ ${dup.patient} بتاريخ ${dup.date}`;
+      errEl.classList.add('show');
+      inputEl.classList.add('err');
+      return false;
+    }
+    errEl.classList.remove('show');
+    inputEl.classList.remove('err');
+    return true;
+  }
+  document.getElementById('fReceipt').addEventListener('input', checkReceiptDuplicate);
+
+  function resetForm(){
+    document.getElementById('entryForm').reset();
+    document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('fType').value = 'اجراءات';
+    if(currentUser && currentUser.role==='doctor' && currentUser.linkedDoctor){
+      document.getElementById('fDoctor').value = currentUser.linkedDoctor;
+    }
+    updateRemaining();
+    updatePatientStatus();
+    checkReceiptDuplicate();
+    editingId = null;
+    document.getElementById('editBanner').style.display = 'none';
+    document.getElementById('submitBtn').textContent = 'حفظ العملية';
+  }
+  document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+
+  document.getElementById('entryForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!doctors.length){ toast('أضف طبيبًا من تبويب "الأطباء" أولاً'); return; }
+    const patientName = document.getElementById('fPatient').value.trim();
+    const medNum = document.getElementById('fMedNum').value.trim();
+    if(!patientName){ toast('اكتب اسم المريض'); return; }
+    if(!checkReceiptDuplicate()){ toast('رقم الايصال مكرر، عدّله'); return; }
+
+    const p = findOrCreatePatient(patientName, medNum);
+    const data = {
+      date: document.getElementById('fDate').value,
+      patient: patientName,
+      patientId: p.id,
+      medNum: medNum,
+      receipt: document.getElementById('fReceipt').value.trim(),
+      doctor: document.getElementById('fDoctor').value,
+      type: document.getElementById('fType').value,
+      proc: document.getElementById('fProc').value.trim(),
+      value: parseFloat(fValue.value)||0,
+      discount: parseFloat(fDiscount.value)||0,
+      paid: parseFloat(fPaid.value)||0,
+    };
+
+    let wasEdit = false;
+    if(editingId){
+      const idx = entries.findIndex(x=>x.id===editingId);
+      if(idx>-1) entries[idx] = Object.assign({id:editingId}, data);
+      toast('تم تعديل العملية');
+      wasEdit = true;
+    } else {
+      entries.unshift(Object.assign({id: genId()}, data));
+      toast('تم حفظ العملية');
+    }
+
+    await saveEntries();
+    await savePatients();
+    resetForm();
+    rebuildPatientDatalist();
+    renderPeriodSelect();
+    renderDashboard();
+    renderRecords();
+    renderPatients();
+    renderCompareRangeOptions();
+    renderCompareChart();
+    document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
+    logAction(`${wasEdit?'تعديل':'إضافة'} إيصال: ${data.patient} · ${data.proc} · ${fmt(data.paid)} ج.م`);
+  });
+
+  function startEdit(id){
+    const en = entries.find(x=>x.id===id);
+    if(!en) return;
+    document.getElementById('fPatient').value = en.patient;
+    document.getElementById('fMedNum').value = en.medNum||'';
+    document.getElementById('fReceipt').value = en.receipt||'';
+    document.getElementById('fDate').value = en.date;
+    document.getElementById('fDoctor').value = en.doctor;
+    document.getElementById('fType').value = en.type;
+    document.getElementById('fProc').value = en.proc;
+    fValue.value = en.value; fDiscount.value = en.discount||0; fPaid.value = en.paid;
+    updateRemaining();
+    updatePatientStatus();
+    editingId = id;
+    checkReceiptDuplicate();
+    document.getElementById('editBanner').style.display = 'flex';
+    document.getElementById('submitBtn').textContent = 'حفظ التعديل';
+    switchTab('add');
+  }
+
+  async function deleteEntry(id){
+    const removed = entries.find(x=>x.id===id);
+    if(removed && !confirm(`تأكيد حذف إيصال ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م؟ الحذف نهائي.`)) return;
+    entries = entries.filter(x=>x.id!==id);
+    await saveEntries();
+    renderPeriodSelect();
+    renderDashboard();
+    renderRecords();
+    renderPatients();
+    renderCompareRangeOptions();
+    renderCompareChart();
+    document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
+    if(removed) logAction(`حذف إيصال: ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م`);
+  }
+
+  document.addEventListener('click', function(e){
+    const editBtn = e.target.closest('.edit-btn');
+    if(editBtn){ startEdit(editBtn.dataset.id); return; }
+    const delBtn = e.target.closest('.del-btn');
+    if(delBtn){ deleteEntry(delBtn.dataset.id); return; }
+    const printBtn = e.target.closest('.print-btn');
+    if(printBtn){ printEntry(printBtn.dataset.id); return; }
+  });
+
+  function buildReceiptHtml(e){
+    const remaining = e.value - (e.discount||0) - e.paid;
+    return `
+      <div class="receipt-clinic">${escapeHtml(settings.clinicName || 'Dental Zone')}</div>
+      <div class="receipt-sub">إيصال دفع</div>
+      <div class="receipt-row"><span>التاريخ</span><b>${escapeHtml(e.date)}</b></div>
+      <div class="receipt-row"><span>اسم المريض</span><b>${escapeHtml(e.patient)}</b></div>
+      ${e.medNum ? `<div class="receipt-row"><span>الرقم الطبي الموحد</span><b>${escapeHtml(e.medNum)}</b></div>` : ''}
+      ${e.receipt ? `<div class="receipt-row"><span>رقم الايصال</span><b>${escapeHtml(e.receipt)}</b></div>` : ''}
+      <div class="receipt-row"><span>الطبيب</span><b>${escapeHtml(e.doctor)}</b></div>
+      <div class="receipt-row"><span>نوع الخدمة</span><b>${escapeHtml(e.type)}</b></div>
+      <div class="receipt-row"><span>الاجراء</span><b>${escapeHtml(e.proc)}</b></div>
+      <div class="receipt-divider"></div>
+      <div class="receipt-row"><span>القيمة</span><b>${fmt(e.value)} ج.م</b></div>
+      ${e.discount ? `<div class="receipt-row"><span>الخصم</span><b>${fmt(e.discount)} ج.م</b></div>` : ''}
+      <div class="receipt-row"><span>المدفوع</span><b>${fmt(e.paid)} ج.م</b></div>
+      <div class="receipt-row total"><span>المتبقي</span><b>${fmt(remaining)} ج.م</b></div>
+      <div class="receipt-footer">شكرًا لزيارتكم</div>
+    `;
+  }
+  function printEntry(id){
+    const e = entries.find(x=>x.id===id);
+    if(!e) return;
+    document.getElementById('printReceiptContent').innerHTML = buildReceiptHtml(e);
+    window.print();
+  }
+
+  // ---------- Dashboard ----------
+  function renderDashboard(){
+    const scoped = entriesInPeriod(selectedPeriod);
+    const totalIncome = scoped.reduce((s,e)=>s+e.paid,0);
+    const totalOutstanding = scoped.reduce((s,e)=>s+(e.value-(e.discount||0)-e.paid),0);
+    const totalCheckup = scoped.filter(e=>e.type==='كشف').reduce((s,e)=>s+e.paid,0);
+    const totalProcedures = scoped.filter(e=>e.type==='اجراءات').reduce((s,e)=>s+e.paid,0);
+    const totalCrownsGross = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const totalCheckupProc = totalCheckup + totalProcedures;
+    const totalLabCost = labWorkInPeriod(selectedPeriod).reduce((s,w)=>s+w.total,0);
+    const netCrowns = totalCrownsGross - totalLabCost;
+    const grandTotal = netCrowns + totalCheckupProc;
+    const crownSharePct = grandTotal>0 ? (netCrowns/grandTotal*100) : 0;
+    const checkupProcSharePct = grandTotal>0 ? (totalCheckupProc/grandTotal*100) : 0;
+
+    document.getElementById('statTotalIncome').textContent = fmt(totalIncome) + ' ج.م';
+    document.getElementById('statTotalOutstanding').textContent = totalOutstanding>0 ? ('متبقي غير محصّل: ' + fmt(totalOutstanding) + ' ج.م') : '';
+    document.getElementById('statProcedures').textContent = fmt(totalCheckupProc) + ' ج.م';
+    document.getElementById('statCrowns').textContent = fmt(totalCrownsGross) + ' ج.م';
+
+    document.getElementById('finTable').innerHTML = `
+      <div class="fin-row"><span>إجمالي التركيبات (قبل خصم المعمل)</span><b>${fmt(totalCrownsGross)}</b></div>
+      <div class="fin-row"><span>تكلفة المعامل</span><b class="neg">- ${fmt(totalLabCost)}</b></div>
+      <div class="fin-row total"><span>صافي دخل التركيبات</span><b>${fmt(netCrowns)}</b></div>
+      <div class="fin-row"><span>إجمالي الكشف والتدخلات</span><b>${fmt(totalCheckupProc)}</b></div>
+      <div class="fin-row total grand"><span>الإجمالي النهائي</span><b>${fmt(grandTotal)}</b></div>
+      <div class="fin-row pct"><span>نسبة التركيبات الصافية من الإجمالي</span><b>${crownSharePct.toFixed(1)}٪</b></div>
+      <div class="fin-row pct"><span>نسبة الكشف والتدخلات من الإجمالي</span><b>${checkupProcSharePct.toFixed(1)}٪</b></div>
+    `;
+
+    // per-doctor gross amounts by bucket
+    const byDocCheckupProc = {};
+    const byDocCrownGross = {};
+    const byDocTotal = {};
+    doctorNames().forEach(name=>{ byDocCheckupProc[name]=0; byDocCrownGross[name]=0; byDocTotal[name]=0; });
+    scoped.forEach(e=>{
+      if(!(e.doctor in byDocTotal)) return;
+      byDocTotal[e.doctor] += e.paid;
+      if(e.type==='كشف' || e.type==='اجراءات') byDocCheckupProc[e.doctor] += e.paid;
+      else if(e.type==='تركيبات') byDocCrownGross[e.doctor] += e.paid;
+    });
+
+    let totalDoctorsShare = 0, totalMeShare = 0, totalHospitalShare = 0;
+    const scopedAdjustments = adjustmentsInPeriod(selectedPeriod);
+    const doctorCalc = {};
+    doctorNames().forEach(name=>{
+      const sp = getSplits(name);
+      const checkupAmt = byDocCheckupProc[name]||0;
+      const crownGross = byDocCrownGross[name]||0;
+      const crownNetShare = totalCrownsGross>0 ? (crownGross/totalCrownsGross)*netCrowns : 0;
+
+      const docFromCheckup = checkupAmt * (sp.checkup.doctor/100);
+      const meFromCheckup = checkupAmt * (sp.checkup.me/100);
+      const hospFromCheckup = checkupAmt * (sp.checkup.hospital/100);
+
+      const docFromCrown = crownNetShare * (sp.crown.doctor/100);
+      const meFromCrown = crownNetShare * (sp.crown.me/100);
+      const hospFromCrown = crownNetShare * (sp.crown.hospital/100);
+
+      const adjTotal = scopedAdjustments.filter(a=>a.doctorName===name).reduce((s,a)=>s+a.amount,0);
+
+      const docPayout = docFromCheckup + docFromCrown + adjTotal;
+      const mePayout = meFromCheckup + meFromCrown;
+      const hospPayout = hospFromCheckup + hospFromCrown;
+
+      doctorCalc[name] = { checkupAmt, crownGross, crownNetShare, docPayout, mePayout, hospPayout, adjTotal };
+      totalDoctorsShare += docPayout; totalMeShare += mePayout; totalHospitalShare += hospPayout;
+    });
+
+    document.getElementById('statDoctorsShare').textContent = fmt(totalDoctorsShare) + ' ج.م';
+    document.getElementById('statMeShare').textContent = fmt(totalMeShare) + ' ج.م';
+    document.getElementById('statHospitalShare').textContent = fmt(totalHospitalShare) + ' ج.م';
+
+    const wrap = document.getElementById('doctorBreakdown');
+    let names = Object.keys(byDocTotal);
+    const isRestrictedDoctor = currentUser && currentUser.role==='doctor';
+    if(isRestrictedDoctor){
+      names = names.filter(n=>n===currentUser.linkedDoctor);
+    }
+    if(!names.length){
+      wrap.innerHTML = isRestrictedDoctor
+        ? '<div class="empty-note">حسابك مش مرتبط باسم طبيب بعد — كلم المدير يربطك من تبويب "المستخدمون"</div>'
+        : '<div class="empty-note">لا يوجد أطباء بعد. أضف طبيبًا من تبويب "الأطباء"</div>';
+    } else {
+      wrap.innerHTML = '<div class="stat-card" style="padding:4px 14px;"></div>';
+      const card = wrap.querySelector('.stat-card');
+      names.sort((a,b)=>byDocTotal[b]-byDocTotal[a]).forEach(name=>{
+        const pct = totalIncome>0 ? (byDocTotal[name]/totalIncome*100) : 0;
+        const c = doctorCalc[name];
+        const row = document.createElement('div');
+        row.className = 'doc-row';
+        row.innerHTML = `
+          <div class="doc-row-top">
+            <div class="doc-name">${escapeHtml(name)}</div>
+            <div class="doc-bar-track"><div class="doc-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+            <div class="doc-pct">${pct.toFixed(1)}٪</div>
+          </div>
+          <div class="doc-sub">نصيبه <b>${fmt(c.docPayout)}</b> · نصيبي منه <b>${fmt(c.mePayout)}</b> · نصيب المستشفى <b>${fmt(c.hospPayout)}</b>${c.adjTotal ? ` · تسويات <b class="${c.adjTotal<0?'adj-neg':'adj-pos'}">${c.adjTotal<0?'':'+'}${fmt(c.adjTotal)}</b>` : ''}</div>
+        `;
+        card.appendChild(row);
+      });
+    }
+  }
+
+  // ---------- Records ----------
+  function buildRecordCard(e){
+    const remaining = e.value - (e.discount||0) - e.paid;
+    const div = document.createElement('div');
+    div.className = 'record';
+    div.innerHTML = `
+      <div class="record-top">
+        <div>
+          <div class="record-name">${escapeHtml(e.patient||'—')}</div>
+          <div class="record-date">${escapeHtml(e.date||'')}${e.medNum?' · رقم طبي '+escapeHtml(e.medNum):''}${e.receipt?' · ايصال '+escapeHtml(e.receipt):''}</div>
+        </div>
+        <div class="record-badge badge-${e.type}">${e.type}</div>
+      </div>
+      <div class="record-proc">${escapeHtml(e.proc||'')}</div>
+      <div class="record-nums">
+        <span>القيمة <b>${fmt(e.value)}</b></span>
+        ${e.discount ? `<span>الخصم <b>${fmt(e.discount)}</b></span>` : ''}
+        <span>المدفوع <b>${fmt(e.paid)}</b></span>
+        <span>المتبقي <b>${fmt(remaining)}</b></span>
+      </div>
+      <div class="record-foot">
+        <div class="record-doc">${escapeHtml(e.doctor||'')}</div>
+        <div class="record-actions">
+          <button class="print-btn" data-id="${e.id}">طباعة</button>
+          ${canManageEntry(e) ? `<button class="edit-btn" data-id="${e.id}">تعديل</button><button class="del-btn" data-id="${e.id}">حذف</button>` : ''}
+        </div>
+      </div>
+    `;
+    return div;
+  }
+
+  function renderRecords(){
+    const fd = document.getElementById('filterDoctor').value;
+    const ft = document.getElementById('filterType').value;
+    const fDateVal = document.getElementById('filterDate').value;
+    const q = norm(document.getElementById('recordSearch').value);
+    const list = entries.filter(e =>
+      (!fd || e.doctor===fd) &&
+      (!ft || e.type===ft) &&
+      (!fDateVal || e.date===fDateVal) &&
+      (!q || norm(e.patient).includes(q) || norm(e.doctor).includes(q) || norm(e.receipt).includes(q))
+    ).sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?1:-1));
+    const box = document.getElementById('recordsList');
+    box.innerHTML = '';
+    if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد عمليات مطابقة</div>'; return; }
+    list.forEach(e=>box.appendChild(buildRecordCard(e)));
+  }
+  document.getElementById('filterDoctor').addEventListener('change', renderRecords);
+  document.getElementById('filterType').addEventListener('change', renderRecords);
+  document.getElementById('filterDate').addEventListener('change', renderRecords);
+  document.getElementById('recordSearch').addEventListener('input', renderRecords);
+
+  // ---------- Patients ----------
+  function renderPatients(){
+    const q = norm(document.getElementById('patientSearch').value);
+    const debtOnly = document.getElementById('debtOnlyToggle').checked;
+    const box = document.getElementById('patientsList');
+    let list = patients
+      .filter(p => !q || norm(p.name).includes(q))
+      .map(p=>{
+        const pEntries = entries.filter(e=>e.patientId===p.id);
+        const totalPaid = pEntries.reduce((s,e)=>s+e.paid,0);
+        const totalRemaining = pEntries.reduce((s,e)=>s+(e.value-(e.discount||0)-e.paid),0);
+        return { p, pEntries, totalPaid, totalRemaining };
+      });
+    if(debtOnly) list = list.filter(x=>x.totalRemaining>0);
+    list.sort((a,b)=> debtOnly ? (b.totalRemaining-a.totalRemaining) : a.p.name.localeCompare(b.p.name,'ar'));
+    box.innerHTML = '';
+    if(!list.length){
+      box.innerHTML = debtOnly
+        ? '<div class="empty-note">مفيش مديونيات مطابقة — كل المرضى مسددين بالكامل 🎉</div>'
+        : '<div class="empty-note">لا يوجد مرضى مطابقون. المرضى يُضافون تلقائيًا عند تسجيل أول ايصال لهم</div>';
+      return;
+    }
+    list.forEach(({p, pEntries, totalPaid, totalRemaining})=>{
+      const isOpen = expandedPatients.has(p.id);
+      const card = document.createElement('div');
+      card.className = 'patient-card';
+      card.innerHTML = `
+        <div class="patient-head" data-pid="${p.id}">
+          <div>
+            <div class="patient-name">${escapeHtml(p.name)}</div>
+            <div class="patient-meta">${p.medNum?('رقم طبي '+escapeHtml(p.medNum)+' · '):''}${pEntries.length} إيصال</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="patient-totals">
+              <div class="pv">${fmt(totalPaid)}</div>
+              <div class="pl">${totalRemaining>0 ? 'متبقي '+fmt(totalRemaining) : 'مسدد بالكامل'}</div>
+            </div>
+            <div class="chev ${isOpen?'open':''}">▾</div>
+          </div>
+        </div>
+        <div class="patient-body ${isOpen?'open':''}" id="pbody-${p.id}"></div>
+      `;
+      box.appendChild(card);
+      if(isOpen){
+        const bodyEl = card.querySelector('.patient-body');
+        if(!pEntries.length){ bodyEl.innerHTML = '<div class="empty-note">لا توجد عمليات مسجلة</div>'; }
+        else pEntries.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(e=>bodyEl.appendChild(buildRecordCard(e)));
+      }
+    });
+    box.querySelectorAll('.patient-head').forEach(h=>{
+      h.addEventListener('click', ()=>{
+        const pid = h.dataset.pid;
+        if(expandedPatients.has(pid)) expandedPatients.delete(pid); else expandedPatients.add(pid);
+        renderPatients();
+      });
+    });
+  }
+  document.getElementById('patientSearch').addEventListener('input', renderPatients);
+  document.getElementById('debtOnlyToggle').addEventListener('change', renderPatients);
+
+  // ---------- Doctors settings ----------
+  document.getElementById('addDoctorBtn').addEventListener('click', async ()=>{
+    const input = document.getElementById('newDoctorName');
+    const name = input.value.trim();
+    if(!name) return;
+    if(doctorNames().includes(name)){ toast('الطبيب موجود بالفعل'); return; }
+    doctors.push({ name, splits: defaultSplits() });
+    await saveDoctors();
+    input.value='';
+    renderDoctorSelects();
+    renderDoctorsSettings();
+    renderDashboard();
+    toast('تمت إضافة الطبيب');
+  });
+
+  function splitGroupHtml(name, bucket, sp, title){
+    const sum = (Number(sp.doctor)||0) + (Number(sp.me)||0) + (Number(sp.hospital)||0);
+    return `
+      <div class="split-group">
+        <div class="split-title"><span>${title}</span><span class="split-sum ${sum!==100?'warn':''}" data-sumfor="${escapeHtml(name)}|${bucket}">${sum}٪</span></div>
+        <div class="split-inputs">
+          <div class="split-item"><label>الطبيب</label><div class="split-input-wrap"><input type="number" class="split-input" data-name="${escapeHtml(name)}" data-bucket="${bucket}" data-role="doctor" min="0" max="100" value="${sp.doctor}"><span>٪</span></div></div>
+          <div class="split-item"><label>أنا</label><div class="split-input-wrap"><input type="number" class="split-input" data-name="${escapeHtml(name)}" data-bucket="${bucket}" data-role="me" min="0" max="100" value="${sp.me}"><span>٪</span></div></div>
+          <div class="split-item"><label>المستشفى</label><div class="split-input-wrap"><input type="number" class="split-input" data-name="${escapeHtml(name)}" data-bucket="${bucket}" data-role="hospital" min="0" max="100" value="${sp.hospital}"><span>٪</span></div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function adjustmentsHtml(name){
+    const list = adjustments.filter(a=>a.doctorName===name).sort((a,b)=>a.date<b.date?1:-1);
+    const rows = list.map(a=>`
+      <tr>
+        <td>${escapeHtml(a.date)}</td>
+        <td class="${a.amount<0?'adj-neg':'adj-pos'}">${a.amount<0?'':'+'}${fmt(a.amount)}</td>
+        <td>${escapeHtml(a.note||'')}</td>
+        <td><button class="row-del adj-del" data-id="${a.id}">✕</button></td>
+      </tr>`).join('');
+    return `
+      <div class="split-group">
+        <div class="split-title"><span>تسويات / سلف (تُخصم أو تُضاف لنصيب الطبيب)</span></div>
+        <div class="row3">
+          <div class="field" style="margin-bottom:8px;"><input type="date" class="adj-date" data-name="${escapeHtml(name)}" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" class="adj-amount" data-name="${escapeHtml(name)}" placeholder="القيمة (سالب للخصم)"></div>
+          <button class="btn-mini adj-add" data-name="${escapeHtml(name)}">إضافة</button>
+        </div>
+        <div class="field" style="margin-bottom:6px;"><input type="text" class="adj-note" data-name="${escapeHtml(name)}" placeholder="ملاحظة (مثال: سلفة)"></div>
+        ${list.length ? `<table class="mini-table"><thead><tr><th>التاريخ</th><th>القيمة</th><th>ملاحظة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+      </div>
+    `;
+  }
+
+  function renderDoctorsSettings(){
+    const box = document.getElementById('doctorsList');
+    box.innerHTML = '';
+    if(!doctors.length){ box.innerHTML = '<div class="empty-note">لا يوجد أطباء مضافون بعد</div>'; return; }
+    doctors.forEach(d=>{
+      const name = d.name;
+      const sp = getSplits(name);
+      const row = document.createElement('div');
+      row.className = 'doc-list-row';
+      row.innerHTML = `
+        <div class="doc-list-top">
+          <div class="doc-list-name">${escapeHtml(name)}</div>
+          <div style="display:flex;gap:10px;">
+            <button class="rename-doc-btn" data-name="${escapeHtml(name)}" style="border:none;background:none;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">تعديل الاسم</button>
+            <button class="rm-btn" data-name="${escapeHtml(name)}">✕</button>
+          </div>
+        </div>
+        ${splitGroupHtml(name, 'checkup', sp.checkup, 'الكشف والتدخلات')}
+        ${splitGroupHtml(name, 'crown', sp.crown, 'التركيبات (بعد خصم المعمل)')}
+        ${adjustmentsHtml(name)}
+      `;
+      box.appendChild(row);
+    });
+    box.querySelectorAll('.rm-btn').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const name = b.dataset.name;
+        const hasEntries = entries.some(e=>e.doctor===name);
+        if(hasEntries){
+          toast('مينفعش تحذف طبيب عنده إيصالات مسجلة — لازم تعدّل أو تحذف إيصالاته الأول');
+          return;
+        }
+        doctors = doctors.filter(d=>d.name!==name);
+        await saveDoctors();
+        renderDoctorSelects(); renderDoctorsSettings(); renderDashboard();
+        logAction(`حذف طبيب: ${name}`);
+      });
+    });
+    box.querySelectorAll('.rename-doc-btn').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const oldName = b.dataset.name;
+        const newName = prompt('الاسم الجديد للطبيب:', oldName);
+        if(newName===null) return;
+        const trimmed = newName.trim();
+        if(!trimmed || trimmed===oldName) return;
+        if(doctorNames().includes(trimmed)){ toast('في طبيب تاني بنفس الاسم ده بالفعل'); return; }
+        const d = doctors.find(d=>d.name===oldName);
+        if(!d) return;
+        d.name = trimmed;
+        entries.forEach(e=>{ if(e.doctor===oldName) e.doctor = trimmed; });
+        adjustments.forEach(a=>{ if(a.doctorName===oldName) a.doctorName = trimmed; });
+        users.forEach(u=>{ if(u.linkedDoctor===oldName) u.linkedDoctor = trimmed; });
+        await saveDoctors();
+        await saveEntries();
+        await saveAdjustments();
+        await saveUsers();
+        renderDoctorSelects();
+        renderDoctorsSettings();
+        renderDashboard();
+        renderRecords();
+        toast('تم تعديل اسم الطبيب في كل السجلات');
+        logAction(`تعديل اسم طبيب: ${oldName} إلى ${trimmed}`);
+      });
+    });
+    box.querySelectorAll('.split-input').forEach(inp=>{
+      inp.addEventListener('change', async ()=>{
+        let v = parseFloat(inp.value); if(isNaN(v)) v = 0; v = Math.max(0, Math.min(100, v)); inp.value = v;
+        const d = doctors.find(d=>d.name===inp.dataset.name);
+        if(!d) return;
+        if(!d.splits) d.splits = defaultSplits();
+        d.splits[inp.dataset.bucket][inp.dataset.role] = v;
+        await saveDoctors();
+        renderDoctorsSettings();
+        renderDashboard();
+        toast('تم تحديث نسب التوزيع');
+        logAction(`تعديل نسبة توزيع (${inp.dataset.bucket}/${inp.dataset.role}) للطبيب ${inp.dataset.name} إلى ${v}٪`);
+      });
+    });
+    box.querySelectorAll('.adj-add').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const name = btn.dataset.name;
+        const dateInp = box.querySelector(`.adj-date[data-name="${name}"]`);
+        const amountInp = box.querySelector(`.adj-amount[data-name="${name}"]`);
+        const noteInp = box.querySelector(`.adj-note[data-name="${name}"]`);
+        const amount = parseFloat(amountInp.value);
+        if(!amount){ toast('اكتب قيمة التسوية'); return; }
+        adjustments.push({ id: genId(), doctorName: name, date: dateInp.value || new Date().toISOString().slice(0,10), amount, note: noteInp.value.trim() });
+        await saveAdjustments();
+        renderDoctorsSettings();
+        renderDashboard();
+        toast('تمت إضافة التسوية');
+        logAction(`إضافة تسوية ${fmt(amount)} ج.م للطبيب ${name}${noteInp.value.trim()?(' - '+noteInp.value.trim()):''}`);
+      });
+    });
+    box.querySelectorAll('.adj-del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('حذف التسوية دي نهائي، متأكد؟')) return;
+        adjustments = adjustments.filter(a=>a.id!==btn.dataset.id);
+        await saveAdjustments();
+        renderDoctorsSettings();
+        renderDashboard();
+      });
+    });
+  }
+
+  // ---------- Labs ----------
+  document.getElementById('addLabBtn').addEventListener('click', async ()=>{
+    const input = document.getElementById('newLabName');
+    const name = input.value.trim();
+    if(!name) return;
+    labsData.labs.push({ id: genId(), name });
+    await saveLabs();
+    input.value = '';
+    renderLabs();
+    toast('تمت إضافة المعمل');
+  });
+
+  function labTotal(labId){ return labsData.work.filter(w=>w.labId===labId).reduce((s,w)=>s+w.total,0); }
+
+  function renderLabs(){
+    const box = document.getElementById('labsList');
+    box.innerHTML = '';
+    if(!labsData.labs.length){ box.innerHTML = '<div class="empty-note">لا يوجد معامل مضافة بعد</div>'; return; }
+
+    labsData.labs.forEach(lab=>{
+      const isOpen = expandedLabs.has(lab.id);
+      const items = labsData.items.filter(it=>it.labId===lab.id);
+      const work = labsData.work.filter(w=>w.labId===lab.id).sort((a,b)=>a.date<b.date?1:-1);
+      const total = labTotal(lab.id);
+
+      const card = document.createElement('div');
+      card.className = 'lab-card';
+      card.innerHTML = `
+        <div class="lab-head" data-lid="${lab.id}">
+          <div>
+            <div class="lab-name">${escapeHtml(lab.name)}</div>
+            <div class="lab-total">إجمالي التكلفة: ${fmt(total)} ج.م</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="rm-btn" data-remove-lab="${lab.id}">✕</button>
+            <div class="chev ${isOpen?'open':''}">▾</div>
+          </div>
+        </div>
+        <div class="lab-body ${isOpen?'open':''}" id="labbody-${lab.id}"></div>
+      `;
+      box.appendChild(card);
+
+      if(isOpen){
+        const body = card.querySelector('.lab-body');
+        body.innerHTML = `
+          <h3 class="sub-title">قائمة أسعار المعمل</h3>
+          <div class="row3">
+            <div class="field" style="margin-bottom:8px;"><input type="text" class="lab-item-name" data-lid="${lab.id}" placeholder="اسم الصنف"></div>
+            <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" class="lab-item-price" data-lid="${lab.id}" placeholder="السعر"></div>
+            <button class="btn-mini lab-add-item" data-lid="${lab.id}">إضافة</button>
+          </div>
+          <table class="mini-table">
+            <thead><tr><th>الصنف</th><th>السعر</th><th></th></tr></thead>
+            <tbody>
+              ${items.map(it=>`<tr><td>${escapeHtml(it.name)}</td><td>${fmt(it.price)}</td><td><button class="row-del lab-item-del" data-id="${it.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">لا توجد أصناف بعد</td></tr>'}
+            </tbody>
+          </table>
+          <div class="stat-sub" style="margin-top:8px;">أو استورد قائمة أسعار كاملة من ملف Excel (عمودين: اسم الصنف والسعر)</div>
+          <input type="file" class="lab-price-import" data-lid="${lab.id}" accept=".xlsx,.xls">
+
+          <h3 class="sub-title">سجل شغل المعمل</h3>
+          <div class="row2">
+            <div class="field" style="margin-bottom:8px;"><input type="date" class="lab-work-date" data-lid="${lab.id}" value="${new Date().toISOString().slice(0,10)}"></div>
+            <div class="field" style="margin-bottom:8px;"><input type="text" class="lab-work-patient" data-lid="${lab.id}" placeholder="اسم المريض" list="patientsDatalist"></div>
+          </div>
+          <div class="row3">
+            <div class="field" style="margin-bottom:8px;">
+              <select class="lab-work-item" data-lid="${lab.id}">
+                <option value="">اختر الصنف</option>
+                ${items.map(it=>`<option value="${it.id}" data-price="${it.price}">${escapeHtml(it.name)} (${fmt(it.price)})</option>`).join('')}
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:8px;"><input type="number" class="lab-work-qty" data-lid="${lab.id}" placeholder="العدد" value="1" min="1"></div>
+            <div class="field" style="margin-bottom:8px;"><input type="number" class="lab-work-disc" data-lid="${lab.id}" placeholder="خصم% (اختياري)" min="0" max="100"></div>
+            <button class="btn-mini lab-add-work" data-lid="${lab.id}">إضافة</button>
+          </div>
+          <table class="mini-table">
+            <thead><tr><th>التاريخ</th><th>المريض</th><th>الصنف</th><th>العدد</th><th>خصم%</th><th>الإجمالي</th><th></th></tr></thead>
+            <tbody>
+              ${work.map(w=>`<tr><td>${escapeHtml(w.date)}</td><td>${escapeHtml(w.patient||'')}</td><td>${escapeHtml(w.itemName)}</td><td>${w.qty}</td><td>${w.discPct?w.discPct+'٪':'—'}</td><td>${fmt(w.total)}</td><td><button class="row-del lab-work-del" data-id="${w.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">لا يوجد شغل مسجل بعد</td></tr>'}
+            </tbody>
+            <tfoot><tr><td colspan="5">الإجمالي</td><td colspan="2">${fmt(total)}</td></tr></tfoot>
+          </table>
+
+          <h3 class="sub-title">مرفقات (فواتير / قوائم أسعار)</h3>
+          <div class="stat-sub" style="margin-bottom:4px;">ارفع صورة أو PDF لفاتورة المعمل أو قائمة أسعاره عشان تكون محفوظة عندك (حد أقصى تقريبًا 1.5 ميجا للملف)</div>
+          <input type="file" class="lab-attach-file" data-lid="${lab.id}" accept="image/*,application/pdf">
+          <div class="attach-list">
+            ${(lab.attachments||[]).map(a=>`
+              <div class="attach-item">
+                ${a.mime && a.mime.startsWith('image/') ? `<img src="${a.dataUrl}" class="attach-thumb">` : `<div class="attach-icon">📄</div>`}
+                <div class="attach-name">${escapeHtml(a.name)}</div>
+                <a href="${a.dataUrl}" target="_blank" class="attach-view">عرض</a>
+                <button class="row-del attach-del" data-lid="${lab.id}" data-id="${a.id}">✕</button>
+              </div>
+            `).join('') || '<div class="empty-note">لا يوجد مرفقات بعد</div>'}
+          </div>
+        `;
+      }
+    });
+
+    box.querySelectorAll('.lab-head').forEach(h=>{
+      h.addEventListener('click', (ev)=>{
+        if(ev.target.closest('[data-remove-lab]')) return;
+        const lid = h.dataset.lid;
+        if(expandedLabs.has(lid)) expandedLabs.delete(lid); else expandedLabs.add(lid);
+        renderLabs();
+      });
+    });
+    box.querySelectorAll('[data-remove-lab]').forEach(b=>{
+      b.addEventListener('click', async (ev)=>{
+        ev.stopPropagation();
+        const lid = b.dataset.removeLab;
+        const lab = labsData.labs.find(l=>l.id===lid);
+        const hasWork = labsData.work.some(w=>w.labId===lid);
+        if(hasWork){
+          const ok = confirm(`المعمل "${lab.name}" عنده سجل شغل وتكاليف مسجلة. حذفه هيمسح كل السجل ده نهائيًا، وهيغيّر أرقام صافي التركيبات للفترات اللي فاتت لو رجعت تصدّرها تاني. متأكد إنك عايز تحذفه؟`);
+          if(!ok) return;
+        }
+        labsData.labs = labsData.labs.filter(l=>l.id!==lid);
+        labsData.items = labsData.items.filter(it=>it.labId!==lid);
+        labsData.work = labsData.work.filter(w=>w.labId!==lid);
+        await saveLabs();
+        renderLabs(); renderDashboard();
+        logAction(`حذف معمل: ${lab?lab.name:lid}${hasWork?' (كان عنده سجل شغل بتكلفة مسجلة)':''}`);
+      });
+    });
+    box.querySelectorAll('.lab-add-item').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const lid = btn.dataset.lid;
+        const nameInp = box.querySelector(`.lab-item-name[data-lid="${lid}"]`);
+        const priceInp = box.querySelector(`.lab-item-price[data-lid="${lid}"]`);
+        const name = nameInp.value.trim(); const price = parseFloat(priceInp.value)||0;
+        if(!name) return;
+        labsData.items.push({ id: genId(), labId: lid, name, price });
+        await saveLabs();
+        renderLabs();
+      });
+    });
+    box.querySelectorAll('.lab-item-del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        labsData.items = labsData.items.filter(it=>it.id!==btn.dataset.id);
+        await saveLabs();
+        renderLabs();
+      });
+    });
+    box.querySelectorAll('.lab-price-import').forEach(inp=>{
+      inp.addEventListener('change', function(){
+        const file = this.files[0];
+        if(!file) return;
+        const lid = this.dataset.lid;
+        const inputEl = this;
+        const reader = new FileReader();
+        reader.onload = async function(ev){
+          try{
+            const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+            let best = null, bestScore = -1;
+            wb.SheetNames.forEach(sn=>{
+              const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:''});
+              const score = rows.filter(r=>r.some(c=>norm(c).includes('صنف')||norm(c).includes('اسم')) && r.some(c=>norm(c).includes('سعر'))).length;
+              if(score>bestScore){ bestScore=score; best=rows; }
+            });
+            if(!best) best = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:''});
+            let headerIdx = best.findIndex(r=>r.some(c=>norm(c).includes('صنف')||norm(c).includes('اسم')));
+            if(headerIdx===-1) headerIdx = 0;
+            const header = (best[headerIdx]||[]).map(h=>String(h||''));
+            const nameIdx = guessCol(header, ['صنف','اسم','خدمة']);
+            const priceIdx = guessCol(header, ['سعر','قيمة']);
+            if(nameIdx===-1 || priceIdx===-1){ toast('تعذر التعرف على عمودي الاسم والسعر في الملف'); inputEl.value=''; return; }
+            const dataRows = best.slice(headerIdx+1).filter(r=>String(r[nameIdx]||'').trim()!=='');
+            let added=0, skipped=0;
+            dataRows.forEach(r=>{
+              const nm = String(r[nameIdx]||'').trim();
+              const pr = parseFloat(r[priceIdx])||0;
+              if(!nm) return;
+              if(labsData.items.some(it=>it.labId===lid && norm(it.name)===norm(nm))){ skipped++; return; }
+              labsData.items.push({ id: genId(), labId: lid, name: nm, price: pr });
+              added++;
+            });
+            await saveLabs();
+            renderLabs();
+            toast(`تم استيراد ${added} صنف${skipped?(' · تم تجاهل '+skipped+' مكرر'):''}`);
+          }catch(err){ console.error(err); toast('تعذر قراءة الملف'); }
+          inputEl.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    });
+    box.querySelectorAll('.lab-add-work').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const lid = btn.dataset.lid;
+        const dateInp = box.querySelector(`.lab-work-date[data-lid="${lid}"]`);
+        const patientInp = box.querySelector(`.lab-work-patient[data-lid="${lid}"]`);
+        const itemSel = box.querySelector(`.lab-work-item[data-lid="${lid}"]`);
+        const qtyInp = box.querySelector(`.lab-work-qty[data-lid="${lid}"]`);
+        const discInp = box.querySelector(`.lab-work-disc[data-lid="${lid}"]`);
+        const itemId = itemSel.value;
+        if(!itemId){ toast('اختر صنف من القائمة'); return; }
+        const item = labsData.items.find(it=>it.id===itemId);
+        const qty = parseFloat(qtyInp.value)||1;
+        const discPct = Math.max(0, Math.min(100, parseFloat(discInp.value)||0));
+        const total = qty*item.price*(1-discPct/100);
+        labsData.work.push({
+          id: genId(), labId: lid, date: dateInp.value || new Date().toISOString().slice(0,10),
+          patient: patientInp.value.trim(), itemId: item.id, itemName: item.name, qty, unitPrice: item.price, discPct, total
+        });
+        await saveLabs();
+        renderLabs();
+        renderDashboard();
+        toast('تمت إضافة الصنف لسجل المعمل');
+      });
+    });
+    box.querySelectorAll('.lab-work-del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('حذف صف التكلفة ده نهائي، متأكد؟')) return;
+        labsData.work = labsData.work.filter(w=>w.id!==btn.dataset.id);
+        await saveLabs();
+        renderLabs();
+        renderDashboard();
+      });
+    });
+    box.querySelectorAll('.lab-attach-file').forEach(inp=>{
+      inp.addEventListener('change', function(){
+        const file = this.files[0];
+        if(!file) return;
+        if(file.size > 1.6*1024*1024){ toast('الملف كبير، اختار ملف أصغر من 1.5 ميجا'); this.value=''; return; }
+        const lid = this.dataset.lid;
+        const fileInputEl = this;
+        const reader = new FileReader();
+        reader.onload = async function(ev){
+          const lab = labsData.labs.find(l=>l.id===lid);
+          if(!lab) return;
+          if(!lab.attachments) lab.attachments = [];
+          const newAtt = { id: genId(), name: file.name, mime: file.type||'application/octet-stream', dataUrl: ev.target.result, size: file.size, uploadedAt: new Date().toISOString() };
+          lab.attachments.push(newAtt);
+          const ok = await saveLabs();
+          if(!ok) lab.attachments = lab.attachments.filter(a=>a.id!==newAtt.id);
+          fileInputEl.value = '';
+          renderLabs();
+          if(ok) toast('تم رفع الملف');
+        };
+        reader.onerror = function(){ toast('تعذر قراءة الملف'); };
+        reader.readAsDataURL(file);
+      });
+    });
+    box.querySelectorAll('.attach-del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const lab = labsData.labs.find(l=>l.id===btn.dataset.lid);
+        if(!lab) return;
+        lab.attachments = (lab.attachments||[]).filter(a=>a.id!==btn.dataset.id);
+        await saveLabs();
+        renderLabs();
+      });
+    });
+  }
+
+  // ---------- Services price list ----------
+  document.getElementById('addServiceBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('newServiceName').value.trim();
+    const type = document.getElementById('newServiceType').value;
+    const price = parseFloat(document.getElementById('newServicePrice').value)||0;
+    if(!name){ toast('اكتب اسم الخدمة'); return; }
+    services.push({ id: genId(), name, type, price });
+    await saveServices();
+    document.getElementById('newServiceName').value = '';
+    document.getElementById('newServicePrice').value = '';
+    rebuildServicesDatalist();
+    renderServices();
+    toast('تمت إضافة الخدمة');
+  });
+
+  document.getElementById('servicesImportFile').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const defaultType = document.getElementById('servicesImportDefaultType').value;
+    const inputEl = this;
+    const reader = new FileReader();
+    reader.onload = async function(ev){
+      try{
+        const wb = XLSX.read(new Uint8Array(ev.target.result), { type:'array' });
+        let best = null, bestScore = -1;
+        wb.SheetNames.forEach(sn=>{
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:''});
+          const score = rows.filter(r=>r.some(c=>norm(c).includes('صنف')||norm(c).includes('اسم')||norm(c).includes('خدمة')) && r.some(c=>norm(c).includes('سعر')||norm(c).includes('قيمة'))).length;
+          if(score>bestScore){ bestScore=score; best=rows; }
+        });
+        if(!best) best = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:''});
+        let headerIdx = best.findIndex(r=>r.some(c=>norm(c).includes('صنف')||norm(c).includes('اسم')||norm(c).includes('خدمة')));
+        if(headerIdx===-1) headerIdx = 0;
+        const header = (best[headerIdx]||[]).map(h=>String(h||''));
+        const nameIdx = guessCol(header, ['صنف','اسم','خدمة']);
+        const priceIdx = guessCol(header, ['سعر','قيمة']);
+        const typeIdx = guessCol(header, ['نوع']);
+        if(nameIdx===-1 || priceIdx===-1){ toast('تعذر التعرف على عمودي الاسم والسعر في الملف'); inputEl.value=''; return; }
+        const dataRows = best.slice(headerIdx+1).filter(r=>String(r[nameIdx]||'').trim()!=='');
+        let added=0, skipped=0;
+        dataRows.forEach(r=>{
+          const nm = String(r[nameIdx]||'').trim();
+          const pr = parseFloat(r[priceIdx])||0;
+          if(!nm) return;
+          let type = defaultType;
+          if(typeIdx>=0){
+            const raw = norm(r[typeIdx]);
+            if(raw.includes('كشف')) type = 'كشف';
+            else if(raw.includes('تركيب')) type = 'تركيبات';
+            else if(raw.includes('اجراء')) type = 'اجراءات';
+          }
+          if(services.some(s=>norm(s.name)===norm(nm))){ skipped++; return; }
+          services.push({ id: genId(), name: nm, type, price: pr });
+          added++;
+        });
+        await saveServices();
+        rebuildServicesDatalist();
+        renderServices();
+        toast(`تم استيراد ${added} خدمة${skipped?(' · تم تجاهل '+skipped+' مكرر'):''}`);
+      }catch(err){ console.error(err); toast('تعذر قراءة الملف'); }
+      inputEl.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  });
+
+  function renderServices(){
+    const box = document.getElementById('servicesList');
+    box.innerHTML = '';
+    if(!services.length){ box.innerHTML = '<div class="empty-note">لا توجد خدمات في القائمة بعد</div>'; return; }
+    const table = document.createElement('table');
+    table.className = 'mini-table';
+    table.innerHTML = `<thead><tr><th>الخدمة</th><th>النوع</th><th>السعر</th><th></th></tr></thead><tbody>
+      ${services.map(s=>`<tr><td>${escapeHtml(s.name)}</td><td>${s.type}</td><td>${fmt(s.price)}</td><td><button class="row-del svc-del" data-id="${s.id}">✕</button></td></tr>`).join('')}
+    </tbody>`;
+    box.appendChild(table);
+    box.querySelectorAll('.svc-del').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        services = services.filter(s=>s.id!==btn.dataset.id);
+        await saveServices();
+        rebuildServicesDatalist();
+        renderServices();
+      });
+    });
+  }
+
+  // ---------- Compare chart ----------
+  function renderCompareRangeOptions(){
+    const sel = document.getElementById('compareCustom');
+    const keys = new Set([currentPeriodKey()]);
+    entries.forEach(e=>keys.add(periodKeyForDate(e.date)));
+    const sorted = Array.from(keys).sort().reverse();
+    sel.innerHTML = sorted.map(k=>`<option value="${k}">${periodLabel(k)}</option>`).join('');
+  }
+  document.getElementById('compareRange').addEventListener('change', function(){
+    document.getElementById('compareCustom').style.display = this.value==='custom' ? 'block' : 'none';
+    renderCompareChart();
+  });
+  document.getElementById('compareCustom').addEventListener('change', renderCompareChart);
+
+  function periodStats(key){
+    const scoped = entriesInPeriod(key);
+    const checkupProc = scoped.filter(e=>e.type==='كشف'||e.type==='اجراءات').reduce((s,e)=>s+e.paid,0);
+    const crownsGross = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const labCost = labWorkInPeriod(key).reduce((s,w)=>s+w.total,0);
+    const totalIncome = scoped.reduce((s,e)=>s+e.paid,0);
+    const net = (crownsGross - labCost) + checkupProc;
+    return { totalIncome, net };
+  }
+
+  function renderCompareChart(){
+    if(typeof Chart === 'undefined') return;
+    const mode = document.getElementById('compareRange').value;
+    let keys = [];
+    if(mode==='custom'){
+      const cur = currentPeriodKey();
+      const chosen = document.getElementById('compareCustom').value || cur;
+      keys = [chosen, cur].filter((v,i,a)=>a.indexOf(v)===i);
+    } else {
+      const n = parseInt(mode);
+      const cur = currentPeriodKey();
+      for(let i=n-1;i>=0;i--) keys.push(shiftPeriodKey(cur, -i));
+    }
+    const labels = keys.map(k=>{ const [y,m]=k.split('-'); return m+'/'+y; });
+    const incomeData = keys.map(k=>periodStats(k).totalIncome);
+    const netData = keys.map(k=>periodStats(k).net);
+
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    if(compareChartObj) compareChartObj.destroy();
+    compareChartObj = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'إجمالي الدخل المحصّل', data: incomeData, backgroundColor: '#d4af37' },
+          { label: 'صافي دخل العيادة', data: netData, backgroundColor: '#f2ecd9' }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position:'bottom', labels:{ color:'#f2ecd9', font:{ family:'Tajawal' } } } },
+        scales: {
+          y: { beginAtZero:true, ticks:{ color:'#a9986b' }, grid:{ color:'#2b2619' } },
+          x: { ticks:{ color:'#a9986b' }, grid:{ color:'#2b2619' } }
+        }
+      }
+    });
+  }
+
+  // ---------- Import from Excel ----------
+  let importWB = null;
+  let importHeaderRow = [];
+  let importDataRows = [];
+  const TYPE_KEYWORDS_CROWN = ['تركيب','كراون','تلبيسة','زيركون','زركون','بورسلين','طقم','تقويم','سنة متحركة','سنة مرنة','حافظ مكان','فينير'];
+  const TYPE_KEYWORDS_CHECKUP = ['كشف','متابعة'];
+
+  function guessType(procText){
+    const t = norm(procText);
+    if(TYPE_KEYWORDS_CHECKUP.some(k=>t.includes(k))) return 'كشف';
+    if(TYPE_KEYWORDS_CROWN.some(k=>t.includes(k))) return 'تركيبات';
+    return 'اجراءات';
+  }
+  function parseImportDate(v){
+    if(v==null || v==='') return '';
+    if(typeof v === 'number'){
+      try{ const d = XLSX.SSF.parse_date_code(v); if(d) return d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0'); }catch(e){}
+    }
+    const s = String(v).trim();
+    let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+    m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+    return '';
+  }
+  function guessCol(headers, keywords){
+    for(let i=0;i<headers.length;i++){ const h = norm(headers[i]); if(keywords.some(k=>h.includes(k))) return i; }
+    return -1;
+  }
+  function fillColSelect(sel, headers, preselectIdx, allowNone){
+    sel.innerHTML = (allowNone ? '<option value="-1">- بدون -</option>' : '') + headers.map((h,i)=>`<option value="${i}">${escapeHtml(h||('عمود '+(i+1)))}</option>`).join('');
+    if(preselectIdx!=null && preselectIdx>=0) sel.value = String(preselectIdx);
+    else if(allowNone) sel.value = '-1';
+  }
+
+  document.getElementById('importFile').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const data = new Uint8Array(ev.target.result);
+        importWB = XLSX.read(data, { type:'array', cellDates:false });
+        const sheetSel = document.getElementById('importSheet');
+        sheetSel.innerHTML = importWB.SheetNames.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+        let bestSheet = importWB.SheetNames[0], bestScore = -1;
+        importWB.SheetNames.forEach(name=>{
+          const rows = XLSX.utils.sheet_to_json(importWB.Sheets[name], {header:1, raw:true, defval:''});
+          const score = rows.filter(r=>r.some(c=>norm(c).includes('مريض'))).length;
+          if(score>bestScore){ bestScore = score; bestSheet = name; }
+        });
+        sheetSel.value = bestSheet;
+        document.getElementById('importMapArea').style.display = 'block';
+        loadImportSheet(bestSheet);
+      }catch(err){ console.error(err); toast('تعذر قراءة الملف'); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  document.getElementById('importSheet').addEventListener('change', function(){ loadImportSheet(this.value); });
+
+  function loadImportSheet(sheetName){
+    const rows = XLSX.utils.sheet_to_json(importWB.Sheets[sheetName], {header:1, raw:true, defval:''});
+    let headerIdx = rows.findIndex(r=>r.some(c=>norm(c).includes('مريض')));
+    if(headerIdx===-1) headerIdx = 0;
+    importHeaderRow = (rows[headerIdx]||[]).map(h=>String(h||'').trim());
+    importDataRows = rows.slice(headerIdx+1).filter(r=>r.some(c=>String(c||'').trim()!==''));
+
+    const dateIdx = guessCol(importHeaderRow, ['تاريخ']);
+    const patientIdx = guessCol(importHeaderRow, ['مريض']);
+    const receiptIdx = guessCol(importHeaderRow, ['ايصال']);
+    const procIdx = guessCol(importHeaderRow, ['نوع','خدمة','اجراء']);
+    const valueIdx = guessCol(importHeaderRow, ['قيمة','اجمالي']);
+    const paidIdx = guessCol(importHeaderRow, ['مدفوع']);
+    const remainingIdx = guessCol(importHeaderRow, ['متبقي']);
+
+    fillColSelect(document.getElementById('mapDate'), importHeaderRow, dateIdx, false);
+    fillColSelect(document.getElementById('mapPatient'), importHeaderRow, patientIdx, false);
+    fillColSelect(document.getElementById('mapReceipt'), importHeaderRow, receiptIdx, true);
+    fillColSelect(document.getElementById('mapProc'), importHeaderRow, procIdx, true);
+    fillColSelect(document.getElementById('mapValue'), importHeaderRow, valueIdx, true);
+    fillColSelect(document.getElementById('mapPaid'), importHeaderRow, paidIdx, true);
+    fillColSelect(document.getElementById('mapRemaining'), importHeaderRow, remainingIdx, true);
+
+    const docSel = document.getElementById('mapDoctor');
+    docSel.innerHTML = '<option value="__none__">بدون تحديد (غير محدد)</option>' + doctorNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+
+    renderImportPreview();
+    document.getElementById('importCount').textContent = importDataRows.length + ' صف تم العثور عليه في هذه الورقة';
+  }
+
+  ['mapDate','mapPatient','mapReceipt','mapProc','mapValue','mapPaid','mapRemaining'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', renderImportPreview);
+  });
+
+  function renderImportPreview(){
+    const dI = parseInt(document.getElementById('mapDate').value);
+    const pI = parseInt(document.getElementById('mapPatient').value);
+    const rI = parseInt(document.getElementById('mapReceipt').value);
+    const prI = parseInt(document.getElementById('mapProc').value);
+    const vI = parseInt(document.getElementById('mapValue').value);
+    const paI = parseInt(document.getElementById('mapPaid').value);
+    const reI = parseInt(document.getElementById('mapRemaining').value);
+    const sample = importDataRows.slice(0,6);
+    let html = '<table><tr><th>التاريخ</th><th>المريض</th><th>الاجراء</th><th>القيمة</th><th>المدفوع</th><th>المتبقي</th><th>الايصال</th></tr>';
+    sample.forEach(r=>{
+      const paid = paI>=0 ? (parseFloat(r[paI])||0) : 0;
+      const remaining = reI>=0 ? (parseFloat(r[reI])||0) : 0;
+      const value = vI>=0 ? (parseFloat(r[vI])||0) : (paid+remaining);
+      html += `<tr><td>${escapeHtml(parseImportDate(r[dI]))}</td><td>${escapeHtml(r[pI])}</td><td>${escapeHtml(prI>=0?r[prI]:'')}</td><td>${fmt(value)}</td><td>${fmt(paid)}</td><td>${fmt(remaining)}</td><td>${escapeHtml(rI>=0?r[rI]:'')}</td></tr>`;
+    });
+    html += '</table>';
+    document.getElementById('importPreview').innerHTML = html;
+  }
+
+  document.getElementById('importDoBtn').addEventListener('click', async function(){
+    if(!importDataRows.length){ toast('لا توجد بيانات للاستيراد'); return; }
+    const dI = parseInt(document.getElementById('mapDate').value);
+    const pI = parseInt(document.getElementById('mapPatient').value);
+    const rI = parseInt(document.getElementById('mapReceipt').value);
+    const prI = parseInt(document.getElementById('mapProc').value);
+    const vI = parseInt(document.getElementById('mapValue').value);
+    const paI = parseInt(document.getElementById('mapPaid').value);
+    const reI = parseInt(document.getElementById('mapRemaining').value);
+    let doctorChoice = document.getElementById('mapDoctor').value;
+
+    if(doctorChoice === '__none__'){
+      if(!doctorNames().includes('غير محدد')){ doctors.push({name:'غير محدد', splits: defaultSplits()}); await saveDoctors(); }
+      doctorChoice = 'غير محدد';
+    }
+
+    const existingKeys = new Set(entries.map(e => norm(e.patient)+'|'+e.date+'|'+norm(e.receipt)+'|'+e.paid));
+    let imported = 0, skippedDup = 0, skippedInvalid = 0, skippedDupReceipt = 0;
+
+    importDataRows.forEach(r=>{
+      const patientName = String(r[pI]||'').trim();
+      const dateStr = parseImportDate(r[dI]);
+      if(!patientName || !dateStr){ skippedInvalid++; return; }
+
+      const receipt = rI>=0 ? String(r[rI]||'').trim() : '';
+      const proc = prI>=0 ? String(r[prI]||'').trim() : '';
+      const paid = paI>=0 ? (parseFloat(r[paI])||0) : 0;
+      const remaining = reI>=0 ? (parseFloat(r[reI])||0) : 0;
+      const value = vI>=0 ? (parseFloat(r[vI])||0) : (paid+remaining);
+
+      if(receipt && entries.some(e=>norm(e.receipt)===norm(receipt))){ skippedDupReceipt++; return; }
+
+      const key = norm(patientName)+'|'+dateStr+'|'+norm(receipt)+'|'+paid;
+      if(existingKeys.has(key)){ skippedDup++; return; }
+      existingKeys.add(key);
+
+      const p = findOrCreatePatient(patientName, '');
+      entries.push({
+        id: genId(), date: dateStr, patient: patientName, patientId: p.id, medNum: '',
+        receipt: receipt, doctor: doctorChoice, type: guessType(proc),
+        proc: proc || 'مستورد من ملف Excel', value: value, discount: 0, paid: paid,
+      });
+      imported++;
+    });
+
+    await saveEntries();
+    await savePatients();
+    rebuildPatientDatalist();
+    renderDoctorSelects();
+    renderPeriodSelect();
+    renderDashboard();
+    renderRecords();
+    renderPatients();
+    renderDoctorsSettings();
+    renderCompareRangeOptions();
+    renderCompareChart();
+    document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
+    document.getElementById('importCount').textContent =
+      `تم استيراد ${imported} عملية${skippedDup?(' · تم تجاهل '+skippedDup+' مكرر'):''}${skippedDupReceipt?(' · '+skippedDupReceipt+' برقم ايصال مكرر'):''}${skippedInvalid?(' · '+skippedInvalid+' صف غير صالح'):''}`;
+    toast('تم الاستيراد بنجاح');
+  });
+
+  // ---------- Excel export ----------
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    const scoped = entriesInPeriod(selectedPeriod);
+    if(!scoped.length){ toast('لا توجد بيانات لهذه الفترة'); return; }
+    if(typeof XLSX === 'undefined'){ toast('تعذر تحميل مكتبة Excel، تأكد من الاتصال بالإنترنت'); return; }
+
+    const rows = scoped.slice().sort((a,b)=>a.date<b.date?-1:1).map(e=>({
+      'التاريخ': e.date, 'اسم المريض': e.patient, 'الرقم الطبي الموحد': e.medNum, 'رقم الايصال': e.receipt,
+      'الطبيب': e.doctor, 'النوع': e.type, 'الاجراء': e.proc, 'القيمة': e.value, 'الخصم': e.discount||0,
+      'المدفوع': e.paid, 'المتبقي': e.value - (e.discount||0) - e.paid
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'العمليات');
+
+    const byDocTotal = {}, byDocCheckupProc = {}, byDocCrownGross = {};
+    doctorNames().forEach(name=>{ byDocTotal[name]=0; byDocCheckupProc[name]=0; byDocCrownGross[name]=0; });
+    scoped.forEach(e=>{
+      if(!(e.doctor in byDocTotal)) return;
+      byDocTotal[e.doctor] += e.paid;
+      if(e.type==='كشف'||e.type==='اجراءات') byDocCheckupProc[e.doctor] += e.paid;
+      else if(e.type==='تركيبات') byDocCrownGross[e.doctor] += e.paid;
+    });
+    const total = scoped.reduce((s,e)=>s+e.paid,0);
+    const totalCrownsGrossX = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const totalLabCostX = labWorkInPeriod(selectedPeriod).reduce((s,w)=>s+w.total,0);
+    const netCrownsX = totalCrownsGrossX - totalLabCostX;
+    let sumDoc=0, sumMe=0, sumHosp=0;
+    const scopedAdjustmentsX = adjustmentsInPeriod(selectedPeriod);
+    const sumRows = Object.keys(byDocTotal).sort((a,b)=>byDocTotal[b]-byDocTotal[a]).map(name=>{
+      const sp = getSplits(name);
+      const checkupAmt = byDocCheckupProc[name]||0;
+      const crownGross = byDocCrownGross[name]||0;
+      const crownNetShare = totalCrownsGrossX>0 ? (crownGross/totalCrownsGrossX)*netCrownsX : 0;
+      const adjTotal = scopedAdjustmentsX.filter(a=>a.doctorName===name).reduce((s,a)=>s+a.amount,0);
+      const docPayout = checkupAmt*(sp.checkup.doctor/100) + crownNetShare*(sp.crown.doctor/100) + adjTotal;
+      const mePayout = checkupAmt*(sp.checkup.me/100) + crownNetShare*(sp.crown.me/100);
+      const hospPayout = checkupAmt*(sp.checkup.hospital/100) + crownNetShare*(sp.crown.hospital/100);
+      sumDoc+=docPayout; sumMe+=mePayout; sumHosp+=hospPayout;
+      return {
+        'الطبيب': name, 'الإجمالي المحصّل': byDocTotal[name],
+        'نسبة من الدخل %': total>0 ? Number((byDocTotal[name]/total*100).toFixed(1)) : 0,
+        'تسويات': Number(adjTotal.toFixed(2)),
+        'نصيب الطبيب': Number(docPayout.toFixed(2)), 'نصيبي': Number(mePayout.toFixed(2)), 'نصيب المستشفى': Number(hospPayout.toFixed(2))
+      };
+    });
+    sumRows.push({'الطبيب':'الإجمالي الكلي','الإجمالي المحصّل': total, 'نسبة من الدخل %': 100, 'تسويات':'', 'نصيب الطبيب': Number(sumDoc.toFixed(2)), 'نصيبي': Number(sumMe.toFixed(2)), 'نصيب المستشفى': Number(sumHosp.toFixed(2))});
+    const ws2 = XLSX.utils.json_to_sheet(sumRows);
+    XLSX.utils.book_append_sheet(wb, ws2, 'ملخص الأطباء');
+
+    const labWork = labWorkInPeriod(selectedPeriod);
+    const labRows = labWork.map(w=>({ 'المعمل': (labsData.labs.find(l=>l.id===w.labId)||{}).name||'', 'التاريخ': w.date, 'المريض': w.patient, 'الصنف': w.itemName, 'العدد': w.qty, 'سعر الوحدة': w.unitPrice, 'خصم%': w.discPct||0, 'الإجمالي': w.total }));
+    const totalLabCost = labWork.reduce((s,w)=>s+w.total,0);
+    const totalCrownsGross = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const totalCheckupProc = scoped.filter(e=>e.type==='كشف'||e.type==='اجراءات').reduce((s,e)=>s+e.paid,0);
+    labRows.push({'المعمل':'إجمالي المعامل','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalLabCost});
+    labRows.push({'المعمل':'صافي التركيبات بعد الخصم','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalCrownsGross - totalLabCost});
+    labRows.push({'المعمل':'إجمالي الكشف والتدخلات','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalCheckupProc});
+    labRows.push({'المعمل':'الإجمالي النهائي','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': (totalCrownsGross-totalLabCost)+totalCheckupProc});
+    const ws3 = XLSX.utils.json_to_sheet(labRows);
+    XLSX.utils.book_append_sheet(wb, ws3, 'المعامل');
+
+    const label = selectedPeriod==='all' ? 'كل-الفترات' : periodLabel(selectedPeriod).replace(/[^0-9a-zA-Zء-ي]+/g,'-');
+    try{ XLSX.writeFile(wb, `Dental-Zone-${label}.xlsx`); toast('تم تجهيز ملف Excel'); }
+    catch(err){ console.error(err); toast('تعذر تنزيل الملف'); }
+  });
+
+  // ---------- Boot / clinic workspace ----------
+  async function boot(){
+    let code = '';
+    try{ const r = await window.storage.get(PERSONAL_KEY, false); code = r ? r.value : ''; }catch(e){ code = ''; }
+    if(code){
+      clinicCode = code;
+      buildKeys();
+      await afterClinicReady();
+    } else {
+      setTimeout(()=>{
+        document.getElementById('splashScreen').classList.add('hide');
+        document.getElementById('setupScreen').style.display = 'flex';
+      }, 700);
+    }
+  }
+
+  async function enterClinic(){
+    const val = document.getElementById('clinicCodeInput').value;
+    const sanitized = sanitizeClinicCode(val);
+    if(!sanitized){ toast('اكتب اسم أو كود صحيح'); return; }
+    clinicCode = sanitized;
+    try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){ console.error(e); }
+    buildKeys();
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('splashScreen').classList.remove('hide');
+    await afterClinicReady();
+  }
+  document.getElementById('clinicEnterBtn').addEventListener('click', enterClinic);
+  document.getElementById('clinicCodeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') enterClinic(); });
+  document.getElementById('switchClinicBtn').addEventListener('click', ()=>{
+    document.getElementById('clinicCodeInput').value = clinicCode;
+    document.getElementById('cancelClinicSwitch').style.display = 'block';
+    document.getElementById('setupScreen').style.display = 'flex';
+  });
+  document.getElementById('cancelClinicSwitch').addEventListener('click', ()=>{
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('cancelClinicSwitch').style.display = 'none';
+  });
+
+  // ---------- Auth: users & login ----------
+  async function afterClinicReady(){
+    try{ const r = await window.storage.get(K.users, SHARED); users = r ? JSON.parse(r.value) : []; }catch(e){ users = []; }
+    document.getElementById('splashScreen').classList.add('hide');
+    if(!users.length){
+      document.getElementById('createManagerScreen').style.display = 'flex';
+    } else {
+      renderLoginUsersList();
+      document.getElementById('loginScreen').style.display = 'flex';
+    }
+  }
+
+  document.getElementById('mgrCreateBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('mgrNameInput').value.trim();
+    const pin = document.getElementById('mgrPinInput').value.trim();
+    if(!name){ toast('اكتب اسمك'); return; }
+    if(pin && !/^\d{4}$/.test(pin)){ toast('الرقم السري لازم ٤ أرقام'); return; }
+    const pinHash = pin ? await sha256(pin) : '';
+    const u = { id: genId(), name, role:'manager', pin: pinHash, linkedDoctor:'' };
+    users.push(u);
+    await saveUsers();
+    currentUser = u;
+    document.getElementById('createManagerScreen').style.display = 'none';
+    document.getElementById('splashScreen').classList.remove('hide');
+    await loadAll();
+    applyRolePermissions();
+    resetInactivityTimer();
+    logAction('إنشاء حساب المدير الأول');
+  });
+
+  let pendingLoginUser = null;
+  function renderLoginUsersList(){
+    const box = document.getElementById('loginUsersList');
+    box.innerHTML = '';
+    document.getElementById('loginPinArea').style.display = 'none';
+    box.style.display = 'flex';
+    users.forEach(u=>{
+      const btn = document.createElement('button');
+      btn.className = 'login-user-btn';
+      btn.innerHTML = `<span>${escapeHtml(u.name)}</span><span class="login-user-role">${ROLE_LABEL[u.role]||u.role}</span>`;
+      btn.addEventListener('click', ()=>{
+        pendingLoginUser = u;
+        if(u.pin){
+          box.style.display = 'none';
+          document.getElementById('loginPinArea').style.display = 'block';
+          document.getElementById('loginPinInput').value = '';
+          document.getElementById('loginPinInput').focus();
+        } else {
+          completeLogin(u);
+        }
+      });
+      box.appendChild(btn);
+    });
+  }
+  document.getElementById('loginPinBack').addEventListener('click', ()=>{
+    document.getElementById('loginPinArea').style.display = 'none';
+    document.getElementById('loginUsersList').style.display = 'flex';
+  });
+  async function tryPinLogin(){
+    const val = document.getElementById('loginPinInput').value.trim();
+    const hash = await sha256(val);
+    if(hash !== (pendingLoginUser.pin||'')){
+      toast('الرقم السري غلط');
+      logAction(`محاولة دخول فاشلة باسم ${pendingLoginUser.name}`);
+      return;
+    }
+    completeLogin(pendingLoginUser);
+  }
+  document.getElementById('loginPinBtn').addEventListener('click', tryPinLogin);
+  document.getElementById('loginPinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryPinLogin(); });
+
+  async function completeLogin(u){
+    currentUser = u;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('splashScreen').classList.remove('hide');
+    await loadAll();
+    applyRolePermissions();
+    resetInactivityTimer();
+    logAction('تسجيل دخول');
+  }
+
+  function logout(){
+    if(currentUser) logAction('تسجيل خروج');
+    currentUser = null;
+    if(inactivityTimer) clearTimeout(inactivityTimer);
+    document.getElementById('view-dash').classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>{ if(v.id!=='view-dash') v.classList.remove('active'); });
+    renderLoginUsersList();
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  function applyRolePermissions(){
+    if(!currentUser) return;
+    const allowed = allowedTabs();
+    document.querySelectorAll('.tab-btn').forEach(b=>{
+      b.style.display = allowed.includes(b.dataset.view) ? '' : 'none';
+    });
+    const activeBtn = document.querySelector('.tab-btn.active');
+    if(!activeBtn || activeBtn.style.display==='none'){
+      const firstAllowed = document.querySelector('.tab-btn:not([style*="display: none"])');
+      if(firstAllowed) switchTab(firstAllowed.dataset.view);
+    }
+    const userEl = document.getElementById('topbarUser');
+    userEl.style.display = 'flex';
+    userEl.innerHTML = `أهلاً، <b>${escapeHtml(currentUser.name)}</b> · ${ROLE_LABEL[currentUser.role]} <button id="logoutBtn">تسجيل خروج</button>`;
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    document.getElementById('switchClinicBtn').style.display = currentUser.role==='manager' ? '' : 'none';
+
+    const fDoctor = document.getElementById('fDoctor');
+    const filterDoctor = document.getElementById('filterDoctor');
+    if(currentUser.role==='doctor' && currentUser.linkedDoctor){
+      fDoctor.value = currentUser.linkedDoctor;
+      fDoctor.disabled = true;
+      filterDoctor.value = currentUser.linkedDoctor;
+      filterDoctor.disabled = true;
+    } else {
+      fDoctor.disabled = false;
+      filterDoctor.disabled = false;
+    }
+
+    document.getElementById('exportBtn').style.display = currentUser.role==='manager' ? '' : 'none';
+
+    renderDashboard();
+    renderRecords();
+  }
+
+  // ---------- Users management (manager only) ----------
+  document.getElementById('newUserRole').addEventListener('change', function(){
+    const wrap = document.getElementById('newUserLinkWrap');
+    wrap.style.display = this.value==='doctor' ? 'block' : 'none';
+    if(this.value==='doctor'){
+      const sel = document.getElementById('newUserLinkDoctor');
+      sel.innerHTML = '<option value="">اربط باسم طبيب (اختياري)</option>' + doctorNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    }
+  });
+  document.getElementById('saveClinicNameBtn').addEventListener('click', async ()=>{
+    settings.clinicName = document.getElementById('clinicNameInput').value.trim();
+    await saveSettings();
+    toast('تم حفظ اسم العيادة');
+  });
+
+  document.getElementById('backupBtn').addEventListener('click', ()=>{
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      clinicCode: clinicCode,
+      entries, doctors, patients, settings, labsData, services, adjustments,
+      users: users.map(u=>({ id:u.id, name:u.name, role:u.role, linkedDoctor:u.linkedDoctor, pin:'' }))
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Dental-Zone-Backup-${clinicCode}-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('تم تنزيل النسخة الاحتياطية');
+    logAction('تنزيل نسخة احتياطية كاملة');
+  });
+
+  document.getElementById('restoreFile').addEventListener('change', function(){
+    const file = this.files[0];
+    if(!file) return;
+    const inputEl = this;
+    const reader = new FileReader();
+    reader.onload = async function(ev){
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(!data || !Array.isArray(data.entries) || !Array.isArray(data.doctors)){
+          toast('الملف مش نسخة احتياطية صحيحة'); inputEl.value=''; return;
+        }
+        const ok = confirm('هتستبدل كل بيانات العيادة الحالية بالنسخة دي (المستخدمين وأرقامهم السرية هتفضل زي ما هي). متأكد؟');
+        if(!ok){ inputEl.value=''; return; }
+        entries = data.entries || [];
+        doctors = data.doctors || [];
+        patients = data.patients || [];
+        settings = data.settings || { me:'' };
+        labsData = data.labsData || { labs:[], items:[], work:[] };
+        services = data.services || [];
+        adjustments = data.adjustments || [];
+        await saveEntries(); await saveDoctors(); await savePatients(); await saveSettings();
+        await saveLabs(); await saveServices(); await saveAdjustments();
+        rebuildPatientDatalist(); rebuildServicesDatalist();
+        renderPeriodSelect(); renderDoctorSelects(); renderDashboard(); renderRecords(); renderPatients();
+        renderDoctorsSettings(); renderLabs(); renderServices(); renderCompareRangeOptions(); renderCompareChart();
+        document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
+        toast('تم استعادة النسخة الاحتياطية بنجاح');
+        logAction('استعادة نسخة احتياطية من ملف');
+      }catch(err){ console.error(err); toast('تعذر قراءة الملف، تأكد إنه ملف نسخة احتياطية صحيح'); }
+      inputEl.value = '';
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById('addUserBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('newUserName').value.trim();
+    const role = document.getElementById('newUserRole').value;
+    const pin = document.getElementById('newUserPin').value.trim();
+    const linkedDoctor = document.getElementById('newUserLinkDoctor').value;
+    if(!name){ toast('اكتب اسم المستخدم'); return; }
+    if(pin && !/^\d{4}$/.test(pin)){ toast('الرقم السري لازم ٤ أرقام'); return; }
+    const pinHash = pin ? await sha256(pin) : '';
+    users.push({ id: genId(), name, role, pin: pinHash, linkedDoctor: role==='doctor'?linkedDoctor:'' });
+    await saveUsers();
+    document.getElementById('newUserName').value='';
+    document.getElementById('newUserPin').value='';
+    renderUsers();
+    toast('تمت إضافة المستخدم');
+    logAction(`إضافة مستخدم جديد: ${name} (${ROLE_LABEL[role]})`);
+  });
+
+  function renderAuditLog(){
+    const box = document.getElementById('auditList');
+    if(!box) return;
+    if(!auditLog.length){ box.innerHTML = '<div class="empty-note">لا يوجد نشاط مسجل بعد</div>'; return; }
+    box.innerHTML = auditLog.slice(0,150).map(a=>{
+      const d = new Date(a.ts);
+      const dateStr = isNaN(d) ? a.ts : d.toLocaleString('ar-EG');
+      return `<div class="audit-item"><div class="a-top"><span class="a-user">${escapeHtml(a.user)} (${ROLE_LABEL[a.role]||a.role})</span><span>${escapeHtml(dateStr)}</span></div>${escapeHtml(a.action)}</div>`;
+    }).join('');
+  }
+
+  function renderUsers(){
+    const nameInput = document.getElementById('clinicNameInput');
+    if(nameInput) nameInput.value = settings.clinicName || '';
+    const box = document.getElementById('usersList');
+    if(!box) return;
+    box.innerHTML = '';
+    if(!users.length){ box.innerHTML = '<div class="empty-note">لا يوجد مستخدمون</div>'; return; }
+    users.forEach(u=>{
+      const row = document.createElement('div');
+      row.className = 'doc-list-row';
+      row.innerHTML = `
+        <div class="doc-list-top">
+          <div class="doc-list-name">${escapeHtml(u.name)} <span class="login-user-role">${ROLE_LABEL[u.role]}</span>${u.linkedDoctor?(' · مرتبط بـ '+escapeHtml(u.linkedDoctor)):''}</div>
+          <button class="rm-btn" data-id="${u.id}" ${u.id===currentUser.id?'disabled style="opacity:.3"':''}>✕</button>
+        </div>
+      `;
+      box.appendChild(row);
+    });
+    box.querySelectorAll('.rm-btn').forEach(b=>{
+      if(b.disabled) return;
+      b.addEventListener('click', async ()=>{
+        const removed = users.find(u=>u.id===b.dataset.id);
+        if(removed && !confirm(`حذف حساب "${removed.name}"؟ مش هيقدر يدخل تاني.`)) return;
+        users = users.filter(u=>u.id!==b.dataset.id);
+        await saveUsers();
+        renderUsers();
+        toast('تم حذف المستخدم');
+        if(removed) logAction(`حذف مستخدم: ${removed.name}`);
+      });
+    });
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
