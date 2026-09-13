@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <style>
   :root{
     --ink:#f2ecd9;--ink-soft:#a9986b;--paper:#070707;--card:#141210;--line:#2b2619;
@@ -43,6 +44,7 @@
   .view.active{display:block;}
 
   h2.section-title{font-size:17px;font-weight:900;margin:4px 0 14px;color:var(--gold);}
+  .count-badge{font-size:12px;font-weight:700;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:2px 10px;vertical-align:middle;margin-right:6px;}
   h3.sub-title{font-size:13.5px;font-weight:900;color:var(--gold);margin:16px 0 10px;}
 
   .period-row{display:flex;gap:8px;margin-bottom:16px;}
@@ -96,6 +98,12 @@
   .field input.err{border-color:var(--rose);background:var(--rose-soft);}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .cart-list{margin-bottom:10px;}
+  .cart-item{display:flex;justify-content:space-between;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:13px;}
+  .cart-item .ci-name{flex:1;}
+  .cart-item .ci-value{color:var(--gold);font-weight:700;margin:0 10px;}
+  .cart-item .ci-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;}
+  .cart-total{display:flex;justify-content:space-between;font-size:12.5px;color:var(--gold);font-weight:700;padding:4px 2px 10px;}
 
   .patient-status{font-size:12px;font-weight:700;margin-top:5px;padding:6px 10px;border-radius:8px;display:none;}
   .patient-status.existing{display:block;background:var(--teal-soft);color:var(--gold);}
@@ -252,25 +260,19 @@
   .clinic-badge b{color:var(--gold);}
   .clinic-badge button{border:none;background:none;color:var(--gold);font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline;}
 
-  #createManagerScreen, #loginScreen{
+  #authScreen{
     display:none;position:fixed;inset:0;z-index:999;background:#000;
     flex-direction:column;align-items:center;justify-content:center;padding:0 28px;text-align:center;
+    overflow-y:auto;
   }
-  #mgrNameInput, #mgrPinInput, #loginPinInput{
+  #authScreen input{
     width:100%;max-width:280px;font-family:inherit;font-size:15px;padding:12px 14px;
     border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);text-align:center;margin-bottom:12px;
   }
-  #mgrNameInput:focus, #mgrPinInput:focus, #loginPinInput:focus{outline:none;border-color:var(--gold);}
-  #mgrCreateBtn, #loginPinBtn{max-width:280px;}
-  #loginUsersList{width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
-  .login-user-btn{
-    width:100%;padding:13px;border:1px solid var(--line);background:var(--card);border-radius:12px;
-    color:var(--ink);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
-    display:flex;justify-content:space-between;align-items:center;
-  }
-  .login-user-btn:active{border-color:var(--gold);}
-  .login-user-role{font-size:11px;color:var(--gold);font-weight:700;background:rgba(212,175,55,.1);padding:3px 10px;border-radius:20px;}
-  #loginPinArea{margin-top:16px;}
+  #authScreen input:focus{outline:none;border-color:var(--gold);}
+  #authScreen .btn-primary{max-width:280px;margin-top:4px;}
+  .auth-error{color:var(--rose);font-size:12px;margin:-4px 0 10px;min-height:14px;max-width:280px;line-height:1.6;}
+  .role-badge{font-size:11px;color:var(--gold);font-weight:700;background:rgba(212,175,55,.1);padding:3px 10px;border-radius:20px;}
   .topbar-user{margin-top:12px;font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:8px;}
   .topbar-user b{color:var(--gold);}
   .topbar-user button{border:none;background:none;color:rgba(224,122,108,.9);font-size:11.5px;cursor:pointer;font-family:inherit;text-decoration:underline;}
@@ -324,35 +326,29 @@
     أخصائي مكافحة العدوى وإدارة المستشفيات
   </div>
 </div>
+<div id="authScreen">
+  <div class="splash-logo">
+  </div>
+  <div class="splash-title" id="authTitle">تسجيل الدخول</div>
+  <div class="setup-desc" id="authDesc">ادخل ببريدك الإلكتروني وكلمة المرور</div>
+  <input type="text" id="authClinicName" placeholder="اسم عيادتك">
+  <input type="text" id="authName" placeholder="اسمك" style="display:none;">
+  <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
+  <input type="password" id="authPassword" placeholder="كلمة المرور (٦ أحرف على الأقل)">
+  <div class="auth-error" id="authError"></div>
+  <button class="btn-primary" id="authSubmitBtn">دخول</button>
+  <div class="setup-hint" id="authToggleMode" style="cursor:pointer;text-decoration:underline;">لسه معندكش حساب؟ سجّل عيادة جديدة</div>
+  <div class="setup-hint" id="authForgotPassword" style="cursor:pointer;text-decoration:underline;">نسيت كلمة المرور؟</div>
+</div>
 <div id="setupScreen">
   <div class="splash-logo">
   </div>
-  <div class="setup-desc">لعزل بيانات عيادتك عن أي عيادة تانية بتستخدم نفس التطبيق، اختار اسم أو كود مميز لعيادتك. احتفظ بيه عشان تدخل بيه من أي جهاز تاني في نفس العيادة.</div>
-  <input type="text" id="clinicCodeInput" placeholder="اسم أو كود عيادتك">
+  <div class="splash-title">تبديل العيادة</div>
+  <div class="setup-desc">اكتب اسم العيادة اللي عايز تدخلها بنفس حسابك الحالي. لو عيادة جديدة تمامًا، هتتضاف كمدير ليها تلقائيًا.</div>
+  <input type="text" id="clinicCodeInput" placeholder="اسم العيادة">
+  <div class="auth-error" id="clinicSwitchError"></div>
   <button class="btn-primary" id="clinicEnterBtn">دخول</button>
-  <div class="setup-hint" id="cancelClinicSwitch" style="display:none;cursor:pointer;text-decoration:underline;">إلغاء والرجوع</div>
-  <div class="setup-hint">لو دي أول مرة، اكتب أي اسم مميز وهيتم إنشاء مساحة بيانات جديدة خاصة بيك تلقائيًا</div>
-</div>
-<div id="createManagerScreen">
-  <div class="splash-logo">
-  </div>
-  <div class="splash-title">إنشاء حساب المدير</div>
-  <div class="setup-desc">دي أول مرة يتفتح فيها التطبيق لعيادتك. اعمل حساب المدير الأساسي، وبعدين تقدر تضيف باقي الأطباء والاستقبال من تبويب "المستخدمون"</div>
-  <input type="text" id="mgrNameInput" placeholder="اسمك">
-  <input type="text" id="mgrPinInput" placeholder="رقم سري (٤ أرقام، اختياري)" maxlength="4" inputmode="numeric">
-  <button class="btn-primary" id="mgrCreateBtn">إنشاء الحساب والدخول</button>
-</div>
-<div id="loginScreen">
-  <div class="splash-logo">
-  </div>
-  <div class="splash-title">مين بيدخل؟</div>
-  <div class="setup-desc">اختار اسمك من القائمة</div>
-  <div id="loginUsersList"></div>
-  <div id="loginPinArea" style="display:none;">
-    <input type="text" id="loginPinInput" placeholder="الرقم السري" maxlength="4" inputmode="numeric">
-    <button class="btn-primary" id="loginPinBtn">دخول</button>
-    <div class="setup-hint" id="loginPinBack" style="cursor:pointer;text-decoration:underline;">رجوع لاختيار الاسم</div>
-  </div>
+  <div class="setup-hint" id="cancelClinicSwitch" style="cursor:pointer;text-decoration:underline;">إلغاء والرجوع</div>
 </div>
 <div id="app">
 
@@ -474,9 +470,11 @@
       </div>
       <div class="field">
         <label>اسم الاجراء / الخدمة</label>
-        <input type="text" id="fProc" required placeholder="مثال: حشو عصب، تلبيسة كراون…" list="servicesDatalist" autocomplete="off">
+        <input type="text" id="fProc" placeholder="مثال: حشو عصب، تلبيسة كراون…" list="servicesDatalist" autocomplete="off">
         <datalist id="servicesDatalist"></datalist>
       </div>
+      <div id="cartList"></div>
+      <button type="button" class="btn-mini" id="addCartItemBtn" style="width:100%;margin-bottom:13px;">➕ ضيف بند تاني لنفس الإيصال</button>
       <div class="row3">
         <div class="field">
           <label>القيمة (ج.م)</label>
@@ -501,9 +499,9 @@
 
   <!-- RECORDS -->
   <div class="view" id="view-records">
-    <h2 class="section-title">سجل العمليات</h2>
+    <h2 class="section-title">سجل العمليات <span class="count-badge" id="entriesCount"></span></h2>
     <div class="search-row">
-      <input type="text" id="recordSearch" placeholder="ابحث باسم المريض أو الطبيب أو رقم الايصال">
+      <input type="text" id="recordSearch" placeholder="ابحث بالاسم أو الطبيب أو رقم الايصال أو الرقم الطبي">
     </div>
     <div class="filter-row">
       <select id="filterDoctor"><option value="">كل الأطباء</option></select>
@@ -513,14 +511,20 @@
         <option value="اجراءات">اجراءات</option>
         <option value="تركيبات">تركيبات</option>
       </select>
-      <input type="date" id="filterDate">
+    </div>
+    <div class="filter-row">
+      <select id="filterPeriod"><option value="all">كل التواريخ</option></select>
+    </div>
+    <div class="filter-row">
+      <input type="date" id="filterFrom" title="من تاريخ">
+      <input type="date" id="filterTo" title="إلى تاريخ">
     </div>
     <div id="recordsList"></div>
   </div>
 
   <!-- PATIENTS -->
   <div class="view" id="view-patients">
-    <h2 class="section-title">قاعدة بيانات المرضى</h2>
+    <h2 class="section-title">قاعدة بيانات المرضى <span class="count-badge" id="patientsCount"></span></h2>
     <div class="search-row">
       <input type="text" id="patientSearch" placeholder="ابحث باسم المريض">
     </div>
@@ -533,7 +537,7 @@
 
   <!-- DOCTORS -->
   <div class="view" id="view-doctors">
-    <h2 class="section-title">الأطباء</h2>
+    <h2 class="section-title">الأطباء <span class="count-badge" id="doctorsCount"></span></h2>
     <div class="field">
       <label>إضافة طبيب جديد</label>
       <div class="inline-add">
@@ -548,7 +552,7 @@
 
   <!-- LABS -->
   <div class="view" id="view-labs">
-    <h2 class="section-title">المعامل</h2>
+    <h2 class="section-title">المعامل <span class="count-badge" id="labsCount"></span></h2>
     <div class="stat-sub" style="margin-bottom:12px;">تكلفة كل معمل بتتجمع وتتخصم من دخل التركيبات في الرئيسية</div>
     <div class="field">
       <label>إضافة معمل جديد</label>
@@ -562,7 +566,7 @@
 
   <!-- PRICES -->
   <div class="view" id="view-prices">
-    <h2 class="section-title">قوائم أسعار الخدمات</h2>
+    <h2 class="section-title">قوائم أسعار الخدمات <span class="count-badge" id="servicesCount"></span></h2>
     <div class="stat-sub" style="margin-bottom:12px;">هتظهر كاقتراح تلقائي لما تكتب اسم الاجراء في صفحة الإضافة، وهتملى القيمة والنوع أوتوماتيك</div>
     <div class="import-step">
       <h3>إضافة خدمة جديدة</h3>
@@ -667,10 +671,11 @@
       <input type="file" id="restoreFile" accept=".json">
       <div class="stat-sub" style="margin-top:6px;">استعادة نسخة هتستبدل كل البيانات الحالية لهذه العيادة</div>
     </div>
-    <div class="stat-sub" style="margin-bottom:12px;">حدد لكل شخص دور (مدير / طبيب / استقبال) ورقم سري اختياري. لو حددت دور "طبيب" اربطه باسمه في قائمة الأطباء عشان يشوف بياناته بس.</div>
+    <div class="stat-sub" style="margin-bottom:12px;">حدد لكل شخص دور (مدير / طبيب / استقبال). لو حددت دور "طبيب" اربطه باسمه في قائمة الأطباء عشان يشوف بياناته بس.</div>
     <div class="import-step">
       <h3>إضافة مستخدم جديد</h3>
       <div class="field" style="margin-bottom:8px;"><input type="text" id="newUserName" placeholder="الاسم"></div>
+      <div class="field" style="margin-bottom:8px;"><input type="email" id="newUserEmail" placeholder="البريد الإلكتروني"></div>
       <div class="row2">
         <div class="field" style="margin-bottom:8px;">
           <select id="newUserRole">
@@ -679,11 +684,12 @@
             <option value="reception">استقبال</option>
           </select>
         </div>
-        <div class="field" style="margin-bottom:8px;"><input type="text" id="newUserPin" placeholder="رقم سري (٤ أرقام، اختياري)" maxlength="4" inputmode="numeric"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="password" id="newUserPassword" placeholder="كلمة مرور (٦ أحرف على الأقل)"></div>
       </div>
       <div class="field" id="newUserLinkWrap" style="display:none;margin-bottom:8px;">
         <select id="newUserLinkDoctor"><option value="">اربط باسم طبيب (اختياري)</option></select>
       </div>
+      <div class="auth-error" id="newUserError" style="text-align:right;max-width:none;"></div>
       <button class="btn-mini" id="addUserBtn" style="width:100%;">إضافة المستخدم</button>
     </div>
     <div id="usersList"></div>
@@ -728,6 +734,11 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const __db = firebase.firestore();
+const __auth = firebase.auth();
+// تطبيق ثانوي منفصل يُستخدم بس لما المدير يعمل حساب لموظف جديد،
+// عشان إنشاء الحساب الجديد ميسجّلش خروج المدير من حسابه الحالي.
+const __secondaryApp = firebase.initializeApp(firebaseConfig, 'Secondary');
+const __secondaryAuth = __secondaryApp.auth();
 
 /* ------------------------------------------------------------
    Storage shim: يخلي التطبيق (اللي بنى أصلاً على window.storage
@@ -806,11 +817,6 @@ window.__firestoreClinicId = '';
   }
   function sanitizeClinicCode(raw){
     return (raw||'').toString().trim().replace(/['"\\\/]/g,'').replace(/\s+/g,'-').slice(0,60);
-  }
-  async function sha256(text){
-    const enc = new TextEncoder().encode(text);
-    const buf = await crypto.subtle.digest('SHA-256', enc);
-    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
   }
 
   const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال' };
@@ -951,7 +957,7 @@ window.__firestoreClinicId = '';
     document.getElementById('topbarSub').textContent = entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية';
 
     selectedPeriod = currentPeriodKey();
-    renderPeriodSelect();
+    renderPeriodSelect(); renderFilterPeriodSelect();
     renderDoctorSelects();
     rebuildPatientDatalist();
     rebuildServicesDatalist();
@@ -995,14 +1001,26 @@ window.__firestoreClinicId = '';
   document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click', ()=>switchTab(btn.dataset.view)));
 
   // ---------- Period select ----------
-  function renderPeriodSelect(){
-    const sel = document.getElementById('periodSelect');
+  function buildPeriodOptionsHtml(){
     const keys = new Set([currentPeriodKey()]);
     entries.forEach(e=>keys.add(periodKeyForDate(e.date)));
     const sorted = Array.from(keys).sort().reverse();
     const years = Array.from(new Set(sorted.map(k=>k.split('-')[0]))).sort().reverse();
     const yearOptions = years.map(y=>`<option value="year:${y}">📅 السنة المحاسبية ${y}</option>`).join('');
-    sel.innerHTML = '<option value="all">كل الفترات</option>' + yearOptions + sorted.map(k=>`<option value="${k}">${periodLabel(k)}</option>`).join('');
+    return yearOptions + sorted.map(k=>`<option value="${k}">${periodLabel(k)}</option>`).join('');
+  }
+  function periodDateRange(key){
+    if(key==='all') return [null, null];
+    if(key.startsWith('year:')){ const y=Number(key.slice(5)); return [`${y}-01-21`, `${y+1}-01-20`]; }
+    const [y,m] = key.split('-').map(Number);
+    let endY=y, endM=m+1; if(endM>12){ endM=1; endY+=1; }
+    const lastDay = new Date(endY, endM-1, 0).getDate();
+    const endDay = Math.min(20, lastDay);
+    return [`${y}-${String(m).padStart(2,'0')}-21`, `${endY}-${String(endM).padStart(2,'0')}-${String(endDay).padStart(2,'0')}`];
+  }
+  function renderPeriodSelect(){
+    const sel = document.getElementById('periodSelect');
+    sel.innerHTML = '<option value="all">كل الفترات</option>' + buildPeriodOptionsHtml();
     sel.value = selectedPeriod;
   }
   document.getElementById('periodSelect').addEventListener('change', function(){ selectedPeriod = this.value; renderDashboard(); });
@@ -1037,6 +1055,10 @@ window.__firestoreClinicId = '';
       const visits = entries.filter(e=>e.patientId===p.id).length;
       el.className = 'patient-status existing';
       el.textContent = `✅ مريض حالي — استكمال إجراءات (${visits} إيصال سابق)`;
+      const medNumInput = document.getElementById('fMedNum');
+      if(p.medNum && !medNumInput.value.trim() && !editingId){
+        medNumInput.value = p.medNum;
+      }
     } else {
       el.className = 'patient-status new';
       el.textContent = '🆕 مريض جديد';
@@ -1075,8 +1097,37 @@ window.__firestoreClinicId = '';
   const fValue = document.getElementById('fValue');
   const fDiscount = document.getElementById('fDiscount');
   const fPaid = document.getElementById('fPaid');
+  let cartItems = [];
+  function renderCartList(){
+    const box = document.getElementById('cartList');
+    if(!cartItems.length){ box.innerHTML = ''; return; }
+    const total = cartItems.reduce((s,i)=>s+i.value,0);
+    box.innerHTML = cartItems.map((it,i)=>`
+      <div class="cart-item">
+        <span class="ci-name">${escapeHtml(it.name)}</span>
+        <span class="ci-value">${fmt(it.value)}</span>
+        <button type="button" class="ci-del" data-i="${i}">✕</button>
+      </div>
+    `).join('') + `<div class="cart-total"><span>إجمالي البنود المضافة</span><span>${fmt(total)} ج.م</span></div>`;
+    box.querySelectorAll('.ci-del').forEach(b=>{
+      b.addEventListener('click', ()=>{ cartItems.splice(Number(b.dataset.i),1); renderCartList(); });
+    });
+  }
+  document.getElementById('addCartItemBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('fProc').value.trim();
+    const value = parseFloat(fValue.value)||0;
+    if(!name || !value){ toast('اكتب اسم البند وقيمته الأول'); return; }
+    cartItems.push({ name, value });
+    document.getElementById('fProc').value = '';
+    fValue.value = '';
+    updateRemaining();
+    renderCartList();
+    document.getElementById('fProc').focus();
+    toast('تمت إضافة البند — اكتب البند التالي');
+  });
   function updateRemaining(){
-    const v = parseFloat(fValue.value)||0, disc = parseFloat(fDiscount.value)||0, p = parseFloat(fPaid.value)||0;
+    const cartTotal = cartItems.reduce((s,i)=>s+i.value,0);
+    const v = (parseFloat(fValue.value)||0) + cartTotal, disc = parseFloat(fDiscount.value)||0, p = parseFloat(fPaid.value)||0;
     const r = v - disc - p;
     const el = document.getElementById('remainingDisplay');
     el.textContent = fmt(r) + ' ج.م';
@@ -1112,6 +1163,8 @@ window.__firestoreClinicId = '';
     if(currentUser && currentUser.role==='doctor' && currentUser.linkedDoctor){
       document.getElementById('fDoctor').value = currentUser.linkedDoctor;
     }
+    cartItems = [];
+    renderCartList();
     updateRemaining();
     updatePatientStatus();
     checkReceiptDuplicate();
@@ -1129,6 +1182,19 @@ window.__firestoreClinicId = '';
     if(!patientName){ toast('اكتب اسم المريض'); return; }
     if(!checkReceiptDuplicate()){ toast('رقم الايصال مكرر، عدّله'); return; }
 
+    const currentName = document.getElementById('fProc').value.trim();
+    const currentValue = parseFloat(fValue.value)||0;
+    let finalProc, finalValue;
+    if(cartItems.length){
+      const allItems = currentName ? [...cartItems, { name: currentName, value: currentValue }] : cartItems;
+      finalProc = allItems.map(i=>i.name).join('، ');
+      finalValue = allItems.reduce((s,i)=>s+i.value,0);
+    } else {
+      if(!currentName){ toast('اكتب اسم الاجراء'); return; }
+      finalProc = currentName;
+      finalValue = currentValue;
+    }
+
     const p = findOrCreatePatient(patientName, medNum);
     const data = {
       date: document.getElementById('fDate').value,
@@ -1138,8 +1204,8 @@ window.__firestoreClinicId = '';
       receipt: document.getElementById('fReceipt').value.trim(),
       doctor: document.getElementById('fDoctor').value,
       type: document.getElementById('fType').value,
-      proc: document.getElementById('fProc').value.trim(),
-      value: parseFloat(fValue.value)||0,
+      proc: finalProc,
+      value: finalValue,
       discount: parseFloat(fDiscount.value)||0,
       paid: parseFloat(fPaid.value)||0,
     };
@@ -1159,7 +1225,7 @@ window.__firestoreClinicId = '';
     await savePatients();
     resetForm();
     rebuildPatientDatalist();
-    renderPeriodSelect();
+    renderPeriodSelect(); renderFilterPeriodSelect();
     renderDashboard();
     renderRecords();
     renderPatients();
@@ -1172,6 +1238,8 @@ window.__firestoreClinicId = '';
   function startEdit(id){
     const en = entries.find(x=>x.id===id);
     if(!en) return;
+    cartItems = [];
+    renderCartList();
     document.getElementById('fPatient').value = en.patient;
     document.getElementById('fMedNum').value = en.medNum||'';
     document.getElementById('fReceipt').value = en.receipt||'';
@@ -1194,7 +1262,7 @@ window.__firestoreClinicId = '';
     if(removed && !confirm(`تأكيد حذف إيصال ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م؟ الحذف نهائي.`)) return;
     entries = entries.filter(x=>x.id!==id);
     await saveEntries();
-    renderPeriodSelect();
+    renderPeriodSelect(); renderFilterPeriodSelect();
     renderDashboard();
     renderRecords();
     renderPatients();
@@ -1240,6 +1308,25 @@ window.__firestoreClinicId = '';
     window.print();
   }
 
+  function printLabInvoice(labId){
+    const lab = labsData.labs.find(l=>l.id===labId);
+    if(!lab) return;
+    const work = labsData.work.filter(w=>w.labId===labId).sort((a,b)=>a.date<b.date?1:-1);
+    const total = work.reduce((s,w)=>s+w.total,0);
+    const rows = work.map(w=>`
+      <div class="receipt-row"><span>${escapeHtml(w.date)} — ${escapeHtml(w.itemName)}${w.patient?(' ('+escapeHtml(w.patient)+')'):''}</span><b>${w.qty} × ${fmt(w.unitPrice)} = ${fmt(w.total)}</b></div>
+    `).join('');
+    document.getElementById('printReceiptContent').innerHTML = `
+      <div class="receipt-clinic">${escapeHtml(settings.clinicName || 'Dental Zone')}</div>
+      <div class="receipt-sub">فاتورة معمل: ${escapeHtml(lab.name)}</div>
+      ${rows || '<div class="receipt-row"><span>لا يوجد شغل مسجل</span></div>'}
+      <div class="receipt-divider"></div>
+      <div class="receipt-row total"><span>الإجمالي المستحق للمعمل</span><b>${fmt(total)} ج.م</b></div>
+      <div class="receipt-footer">تاريخ الطباعة: ${new Date().toISOString().slice(0,10)}</div>
+    `;
+    window.print();
+  }
+
   // ---------- Dashboard ----------
   function renderDashboard(){
     const scoped = entriesInPeriod(selectedPeriod);
@@ -1282,6 +1369,16 @@ window.__firestoreClinicId = '';
       else if(e.type==='تركيبات') byDocCrownGross[e.doctor] += e.paid;
     });
 
+    // lab cost attributed directly to a doctor vs unattributed (distributed proportionally)
+    const scopedLabWork = labWorkInPeriod(selectedPeriod);
+    const attributedLabCost = {};
+    doctorNames().forEach(name=>{ attributedLabCost[name]=0; });
+    let attributedLabTotal = 0;
+    scopedLabWork.forEach(w=>{
+      if(w.doctor && (w.doctor in attributedLabCost)){ attributedLabCost[w.doctor]+=w.total; attributedLabTotal+=w.total; }
+    });
+    const unattributedLabCost = totalLabCost - attributedLabTotal;
+
     let totalDoctorsShare = 0, totalMeShare = 0, totalHospitalShare = 0;
     const scopedAdjustments = adjustmentsInPeriod(selectedPeriod);
     const doctorCalc = {};
@@ -1289,7 +1386,8 @@ window.__firestoreClinicId = '';
       const sp = getSplits(name);
       const checkupAmt = byDocCheckupProc[name]||0;
       const crownGross = byDocCrownGross[name]||0;
-      const crownNetShare = totalCrownsGross>0 ? (crownGross/totalCrownsGross)*netCrowns : 0;
+      const docLabCost = attributedLabCost[name] + (totalCrownsGross>0 ? (crownGross/totalCrownsGross)*unattributedLabCost : 0);
+      const crownNetShare = crownGross - docLabCost;
 
       const docFromCheckup = checkupAmt * (sp.checkup.doctor/100);
       const meFromCheckup = checkupAmt * (sp.checkup.me/100);
@@ -1378,28 +1476,45 @@ window.__firestoreClinicId = '';
   function renderRecords(){
     const fd = document.getElementById('filterDoctor').value;
     const ft = document.getElementById('filterType').value;
-    const fDateVal = document.getElementById('filterDate').value;
+    const fromVal = document.getElementById('filterFrom').value;
+    const toVal = document.getElementById('filterTo').value;
     const q = norm(document.getElementById('recordSearch').value);
     const list = entries.filter(e =>
       (!fd || e.doctor===fd) &&
       (!ft || e.type===ft) &&
-      (!fDateVal || e.date===fDateVal) &&
-      (!q || norm(e.patient).includes(q) || norm(e.doctor).includes(q) || norm(e.receipt).includes(q))
+      (!fromVal || e.date>=fromVal) &&
+      (!toVal || e.date<=toVal) &&
+      (!q || norm(e.patient).includes(q) || norm(e.doctor).includes(q) || norm(e.receipt).includes(q) || norm(e.medNum).includes(q))
     ).sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?1:-1));
+    document.getElementById('entriesCount').textContent = entries.length + ' إيصال' + (list.length!==entries.length ? ` (معروض: ${list.length})` : '');
     const box = document.getElementById('recordsList');
     box.innerHTML = '';
     if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد عمليات مطابقة</div>'; return; }
     list.forEach(e=>box.appendChild(buildRecordCard(e)));
   }
+  function renderFilterPeriodSelect(){
+    const sel = document.getElementById('filterPeriod');
+    const prev = sel.value || 'all';
+    sel.innerHTML = '<option value="all">كل التواريخ</option>' + buildPeriodOptionsHtml();
+    sel.value = prev;
+  }
+  document.getElementById('filterPeriod').addEventListener('change', function(){
+    const [from, to] = periodDateRange(this.value);
+    document.getElementById('filterFrom').value = from || '';
+    document.getElementById('filterTo').value = to || '';
+    renderRecords();
+  });
   document.getElementById('filterDoctor').addEventListener('change', renderRecords);
   document.getElementById('filterType').addEventListener('change', renderRecords);
-  document.getElementById('filterDate').addEventListener('change', renderRecords);
+  document.getElementById('filterFrom').addEventListener('change', renderRecords);
+  document.getElementById('filterTo').addEventListener('change', renderRecords);
   document.getElementById('recordSearch').addEventListener('input', renderRecords);
 
   // ---------- Patients ----------
   function renderPatients(){
     const q = norm(document.getElementById('patientSearch').value);
     const debtOnly = document.getElementById('debtOnlyToggle').checked;
+    document.getElementById('patientsCount').textContent = patients.length + ' مريض';
     const box = document.getElementById('patientsList');
     let list = patients
       .filter(p => !q || norm(p.name).includes(q))
@@ -1490,6 +1605,7 @@ window.__firestoreClinicId = '';
     const rows = list.map(a=>`
       <tr>
         <td>${escapeHtml(a.date)}</td>
+        <td>${escapeHtml(a.kind||'أخرى')}</td>
         <td class="${a.amount<0?'adj-neg':'adj-pos'}">${a.amount<0?'':'+'}${fmt(a.amount)}</td>
         <td>${escapeHtml(a.note||'')}</td>
         <td><button class="row-del adj-del" data-id="${a.id}">✕</button></td>
@@ -1499,16 +1615,26 @@ window.__firestoreClinicId = '';
         <div class="split-title"><span>تسويات / سلف (تُخصم أو تُضاف لنصيب الطبيب)</span></div>
         <div class="row3">
           <div class="field" style="margin-bottom:8px;"><input type="date" class="adj-date" data-name="${escapeHtml(name)}" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field" style="margin-bottom:8px;">
+            <select class="adj-kind" data-name="${escapeHtml(name)}">
+              <option value="سلفة">سلفة</option>
+              <option value="معمل">معمل</option>
+              <option value="أخرى">أخرى</option>
+            </select>
+          </div>
           <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" class="adj-amount" data-name="${escapeHtml(name)}" placeholder="القيمة (سالب للخصم)"></div>
+        </div>
+        <div class="row2">
+          <div class="field" style="margin-bottom:8px;"><input type="text" class="adj-note" data-name="${escapeHtml(name)}" placeholder="ملاحظة (اختياري)"></div>
           <button class="btn-mini adj-add" data-name="${escapeHtml(name)}">إضافة</button>
         </div>
-        <div class="field" style="margin-bottom:6px;"><input type="text" class="adj-note" data-name="${escapeHtml(name)}" placeholder="ملاحظة (مثال: سلفة)"></div>
-        ${list.length ? `<table class="mini-table"><thead><tr><th>التاريخ</th><th>القيمة</th><th>ملاحظة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : ''}
+        ${list.length ? `<table class="mini-table"><thead><tr><th>التاريخ</th><th>النوع</th><th>القيمة</th><th>ملاحظة</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : ''}
       </div>
     `;
   }
 
   function renderDoctorsSettings(){
+    document.getElementById('doctorsCount').textContent = doctors.length + ' طبيب';
     const box = document.getElementById('doctorsList');
     box.innerHTML = '';
     if(!doctors.length){ box.innerHTML = '<div class="empty-note">لا يوجد أطباء مضافون بعد</div>'; return; }
@@ -1589,16 +1715,17 @@ window.__firestoreClinicId = '';
       btn.addEventListener('click', async ()=>{
         const name = btn.dataset.name;
         const dateInp = box.querySelector(`.adj-date[data-name="${name}"]`);
+        const kindSel = box.querySelector(`.adj-kind[data-name="${name}"]`);
         const amountInp = box.querySelector(`.adj-amount[data-name="${name}"]`);
         const noteInp = box.querySelector(`.adj-note[data-name="${name}"]`);
         const amount = parseFloat(amountInp.value);
         if(!amount){ toast('اكتب قيمة التسوية'); return; }
-        adjustments.push({ id: genId(), doctorName: name, date: dateInp.value || new Date().toISOString().slice(0,10), amount, note: noteInp.value.trim() });
+        adjustments.push({ id: genId(), doctorName: name, date: dateInp.value || new Date().toISOString().slice(0,10), kind: kindSel.value, amount, note: noteInp.value.trim() });
         await saveAdjustments();
         renderDoctorsSettings();
         renderDashboard();
         toast('تمت إضافة التسوية');
-        logAction(`إضافة تسوية ${fmt(amount)} ج.م للطبيب ${name}${noteInp.value.trim()?(' - '+noteInp.value.trim()):''}`);
+        logAction(`إضافة تسوية (${kindSel.value}) ${fmt(amount)} ج.م للطبيب ${name}${noteInp.value.trim()?(' - '+noteInp.value.trim()):''}`);
       });
     });
     box.querySelectorAll('.adj-del').forEach(btn=>{
@@ -1627,6 +1754,7 @@ window.__firestoreClinicId = '';
   function labTotal(labId){ return labsData.work.filter(w=>w.labId===labId).reduce((s,w)=>s+w.total,0); }
 
   function renderLabs(){
+    document.getElementById('labsCount').textContent = labsData.labs.length + ' معمل · ' + labsData.work.length + ' حالة';
     const box = document.getElementById('labsList');
     box.innerHTML = '';
     if(!labsData.labs.length){ box.innerHTML = '<div class="empty-note">لا يوجد معامل مضافة بعد</div>'; return; }
@@ -1673,9 +1801,15 @@ window.__firestoreClinicId = '';
           <input type="file" class="lab-price-import" data-lid="${lab.id}" accept=".xlsx,.xls">
 
           <h3 class="sub-title">سجل شغل المعمل</h3>
-          <div class="row2">
+          <div class="row3">
             <div class="field" style="margin-bottom:8px;"><input type="date" class="lab-work-date" data-lid="${lab.id}" value="${new Date().toISOString().slice(0,10)}"></div>
             <div class="field" style="margin-bottom:8px;"><input type="text" class="lab-work-patient" data-lid="${lab.id}" placeholder="اسم المريض" list="patientsDatalist"></div>
+            <div class="field" style="margin-bottom:8px;">
+              <select class="lab-work-doctor" data-lid="${lab.id}">
+                <option value="">بدون تحديد طبيب</option>
+                ${doctorNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+              </select>
+            </div>
           </div>
           <div class="row3">
             <div class="field" style="margin-bottom:8px;">
@@ -1689,12 +1823,13 @@ window.__firestoreClinicId = '';
             <button class="btn-mini lab-add-work" data-lid="${lab.id}">إضافة</button>
           </div>
           <table class="mini-table">
-            <thead><tr><th>التاريخ</th><th>المريض</th><th>الصنف</th><th>العدد</th><th>خصم%</th><th>الإجمالي</th><th></th></tr></thead>
+            <thead><tr><th>التاريخ</th><th>المريض</th><th>الطبيب</th><th>الصنف</th><th>العدد</th><th>خصم%</th><th>الإجمالي</th><th></th></tr></thead>
             <tbody>
-              ${work.map(w=>`<tr><td>${escapeHtml(w.date)}</td><td>${escapeHtml(w.patient||'')}</td><td>${escapeHtml(w.itemName)}</td><td>${w.qty}</td><td>${w.discPct?w.discPct+'٪':'—'}</td><td>${fmt(w.total)}</td><td><button class="row-del lab-work-del" data-id="${w.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">لا يوجد شغل مسجل بعد</td></tr>'}
+              ${work.map(w=>`<tr><td>${escapeHtml(w.date)}</td><td>${escapeHtml(w.patient||'')}</td><td>${escapeHtml(w.doctor||'—')}</td><td>${escapeHtml(w.itemName)}</td><td>${w.qty}</td><td>${w.discPct?w.discPct+'٪':'—'}</td><td>${fmt(w.total)}</td><td><button class="row-del lab-work-del" data-id="${w.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">لا يوجد شغل مسجل بعد</td></tr>'}
             </tbody>
-            <tfoot><tr><td colspan="5">الإجمالي</td><td colspan="2">${fmt(total)}</td></tr></tfoot>
+            <tfoot><tr><td colspan="6">الإجمالي</td><td colspan="2">${fmt(total)}</td></tr></tfoot>
           </table>
+          <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}" style="width:100%;margin-top:8px;">🖨 طباعة فاتورة المعمل</button>
 
           <h3 class="sub-title">مرفقات (فواتير / قوائم أسعار)</h3>
           <div class="stat-sub" style="margin-bottom:4px;">ارفع صورة أو PDF لفاتورة المعمل أو قائمة أسعاره عشان تكون محفوظة عندك (حد أقصى تقريبًا 1.5 ميجا للملف)</div>
@@ -1805,6 +1940,7 @@ window.__firestoreClinicId = '';
         const lid = btn.dataset.lid;
         const dateInp = box.querySelector(`.lab-work-date[data-lid="${lid}"]`);
         const patientInp = box.querySelector(`.lab-work-patient[data-lid="${lid}"]`);
+        const doctorSel = box.querySelector(`.lab-work-doctor[data-lid="${lid}"]`);
         const itemSel = box.querySelector(`.lab-work-item[data-lid="${lid}"]`);
         const qtyInp = box.querySelector(`.lab-work-qty[data-lid="${lid}"]`);
         const discInp = box.querySelector(`.lab-work-disc[data-lid="${lid}"]`);
@@ -1816,13 +1952,16 @@ window.__firestoreClinicId = '';
         const total = qty*item.price*(1-discPct/100);
         labsData.work.push({
           id: genId(), labId: lid, date: dateInp.value || new Date().toISOString().slice(0,10),
-          patient: patientInp.value.trim(), itemId: item.id, itemName: item.name, qty, unitPrice: item.price, discPct, total
+          patient: patientInp.value.trim(), doctor: doctorSel.value||'', itemId: item.id, itemName: item.name, qty, unitPrice: item.price, discPct, total
         });
         await saveLabs();
         renderLabs();
         renderDashboard();
         toast('تمت إضافة الصنف لسجل المعمل');
       });
+    });
+    box.querySelectorAll('.print-lab-invoice').forEach(btn=>{
+      btn.addEventListener('click', ()=>{ printLabInvoice(btn.dataset.lid); });
     });
     box.querySelectorAll('.lab-work-del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -1934,6 +2073,7 @@ window.__firestoreClinicId = '';
   });
 
   function renderServices(){
+    document.getElementById('servicesCount').textContent = services.length + ' صنف';
     const box = document.getElementById('servicesList');
     box.innerHTML = '';
     if(!services.length){ box.innerHTML = '<div class="empty-note">لا توجد خدمات في القائمة بعد</div>'; return; }
@@ -2179,7 +2319,7 @@ window.__firestoreClinicId = '';
     await savePatients();
     rebuildPatientDatalist();
     renderDoctorSelects();
-    renderPeriodSelect();
+    renderPeriodSelect(); renderFilterPeriodSelect();
     renderDashboard();
     renderRecords();
     renderPatients();
@@ -2217,15 +2357,21 @@ window.__firestoreClinicId = '';
     });
     const total = scoped.reduce((s,e)=>s+e.paid,0);
     const totalCrownsGrossX = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
-    const totalLabCostX = labWorkInPeriod(selectedPeriod).reduce((s,w)=>s+w.total,0);
-    const netCrownsX = totalCrownsGrossX - totalLabCostX;
+    const scopedLabWorkX = labWorkInPeriod(selectedPeriod);
+    const totalLabCostX = scopedLabWorkX.reduce((s,w)=>s+w.total,0);
+    const attributedLabCostX = {};
+    doctorNames().forEach(name=>{ attributedLabCostX[name]=0; });
+    let attributedLabTotalX = 0;
+    scopedLabWorkX.forEach(w=>{ if(w.doctor && (w.doctor in attributedLabCostX)){ attributedLabCostX[w.doctor]+=w.total; attributedLabTotalX+=w.total; } });
+    const unattributedLabCostX = totalLabCostX - attributedLabTotalX;
     let sumDoc=0, sumMe=0, sumHosp=0;
     const scopedAdjustmentsX = adjustmentsInPeriod(selectedPeriod);
     const sumRows = Object.keys(byDocTotal).sort((a,b)=>byDocTotal[b]-byDocTotal[a]).map(name=>{
       const sp = getSplits(name);
       const checkupAmt = byDocCheckupProc[name]||0;
       const crownGross = byDocCrownGross[name]||0;
-      const crownNetShare = totalCrownsGrossX>0 ? (crownGross/totalCrownsGrossX)*netCrownsX : 0;
+      const docLabCostX = attributedLabCostX[name] + (totalCrownsGrossX>0 ? (crownGross/totalCrownsGrossX)*unattributedLabCostX : 0);
+      const crownNetShare = crownGross - docLabCostX;
       const adjTotal = scopedAdjustmentsX.filter(a=>a.doctorName===name).reduce((s,a)=>s+a.amount,0);
       const docPayout = checkupAmt*(sp.checkup.doctor/100) + crownNetShare*(sp.crown.doctor/100) + adjTotal;
       const mePayout = checkupAmt*(sp.checkup.me/100) + crownNetShare*(sp.crown.me/100);
@@ -2243,7 +2389,7 @@ window.__firestoreClinicId = '';
     XLSX.utils.book_append_sheet(wb, ws2, 'ملخص الأطباء');
 
     const labWork = labWorkInPeriod(selectedPeriod);
-    const labRows = labWork.map(w=>({ 'المعمل': (labsData.labs.find(l=>l.id===w.labId)||{}).name||'', 'التاريخ': w.date, 'المريض': w.patient, 'الصنف': w.itemName, 'العدد': w.qty, 'سعر الوحدة': w.unitPrice, 'خصم%': w.discPct||0, 'الإجمالي': w.total }));
+    const labRows = labWork.map(w=>({ 'المعمل': (labsData.labs.find(l=>l.id===w.labId)||{}).name||'', 'التاريخ': w.date, 'المريض': w.patient, 'الطبيب': w.doctor||'', 'الصنف': w.itemName, 'العدد': w.qty, 'سعر الوحدة': w.unitPrice, 'خصم%': w.discPct||0, 'الإجمالي': w.total }));
     const totalLabCost = labWork.reduce((s,w)=>s+w.total,0);
     const totalCrownsGross = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
     const totalCheckupProc = scoped.filter(e=>e.type==='كشف'||e.type==='اجراءات').reduce((s,e)=>s+e.paid,0);
@@ -2259,125 +2405,163 @@ window.__firestoreClinicId = '';
     catch(err){ console.error(err); toast('تعذر تنزيل الملف'); }
   });
 
-  // ---------- Boot / clinic workspace ----------
-  async function boot(){
-    let code = '';
-    try{ const r = await window.storage.get(PERSONAL_KEY, false); code = r ? r.value : ''; }catch(e){ code = ''; }
-    if(code){
-      clinicCode = code;
-      buildKeys();
-      await afterClinicReady();
-    } else {
-      setTimeout(()=>{
-        document.getElementById('splashScreen').classList.add('hide');
-        document.getElementById('setupScreen').style.display = 'flex';
-      }, 700);
-    }
+  // ---------- Firebase error messages ----------
+  function firebaseErrorMessage(err){
+    const code = err && err.code || '';
+    const map = {
+      'auth/email-already-in-use': 'البريد الإلكتروني ده مسجل بحساب قبل كده',
+      'auth/invalid-email': 'صيغة البريد الإلكتروني مش صحيحة',
+      'auth/weak-password': 'كلمة المرور ضعيفة، لازم ٦ أحرف على الأقل',
+      'auth/wrong-password': 'كلمة المرور غلط',
+      'auth/user-not-found': 'مفيش حساب بالبريد ده',
+      'auth/invalid-credential': 'البريد الإلكتروني أو كلمة المرور غلط',
+      'auth/too-many-requests': 'محاولات كتير غلط، حاول تاني بعد شوية',
+      'auth/network-request-failed': 'تأكد من اتصال الإنترنت',
+    };
+    return map[code] || 'حصل خطأ، حاول تاني';
   }
 
+  // ---------- Boot / auth flow ----------
+  let authMode = 'login';
+  function showAuthScreen(mode, prefillEmail){
+    authMode = mode;
+    document.getElementById('splashScreen').classList.add('hide');
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('authName').style.display = mode==='signup' ? 'block' : 'none';
+    document.getElementById('authTitle').textContent = mode==='signup' ? 'إنشاء حساب جديد' : 'تسجيل الدخول';
+    document.getElementById('authDesc').textContent = mode==='signup'
+      ? 'اكتب اسم عيادتك وبياناتك — هتبقى مديرها'
+      : 'ادخل باسم عيادتك وبريدك الإلكتروني وكلمة المرور';
+    document.getElementById('authSubmitBtn').textContent = mode==='signup' ? 'إنشاء الحساب' : 'دخول';
+    document.getElementById('authToggleMode').textContent = mode==='signup' ? 'عندك حساب بالفعل؟ سجّل دخول' : 'لسه معندكش حساب؟ سجّل عيادة جديدة';
+    document.getElementById('authError').textContent = '';
+    if(prefillEmail) document.getElementById('authEmail').value = prefillEmail;
+    document.getElementById('authScreen').style.display = 'flex';
+  }
+  document.getElementById('authToggleMode').addEventListener('click', ()=> showAuthScreen(authMode==='signup' ? 'login' : 'signup'));
+
+  async function fetchUsersFor(){
+    try{ const r = await window.storage.get(K.users, SHARED); return r ? JSON.parse(r.value) : []; }catch(e){ return []; }
+  }
+
+  async function resumeSession(fbUser){
+    let code = '';
+    try{ const r = await window.storage.get(PERSONAL_KEY, false); code = r ? r.value : ''; }catch(e){ code = ''; }
+    if(!code){ showAuthScreen('login', fbUser.email||''); return; }
+    clinicCode = code;
+    buildKeys();
+    const existingUsers = await fetchUsersFor();
+    const match = existingUsers.find(u=>u.uid===fbUser.uid);
+    if(!match){ showAuthScreen('login', fbUser.email||''); return; }
+    currentUser = match;
+    users = existingUsers;
+    await loadAll();
+    applyRolePermissions();
+    resetInactivityTimer();
+  }
+
+  async function handleAuthSubmit(){
+    const clinicNameRaw = document.getElementById('authClinicName').value;
+    const sanitized = sanitizeClinicCode(clinicNameRaw);
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const name = document.getElementById('authName').value.trim();
+    const errEl = document.getElementById('authError');
+    errEl.textContent = '';
+    if(!sanitized){ errEl.textContent = 'اكتب اسم العيادة'; return; }
+    if(!email || !password){ errEl.textContent = 'اكتب البريد الإلكتروني وكلمة المرور'; return; }
+    if(authMode==='signup' && !name){ errEl.textContent = 'اكتب اسمك'; return; }
+
+    clinicCode = sanitized;
+    buildKeys();
+    const btn = document.getElementById('authSubmitBtn');
+    btn.disabled = true;
+    try{
+      if(authMode==='signup'){
+        const cred = await __auth.createUserWithEmailAndPassword(email, password);
+        const existingUsers = await fetchUsersFor();
+        const newUser = { id: cred.user.uid, uid: cred.user.uid, name, email, role: existingUsers.length ? 'reception' : 'manager', linkedDoctor:'' };
+        existingUsers.push(newUser);
+        users = existingUsers;
+        await saveUsers();
+        currentUser = newUser;
+      } else {
+        const cred = await __auth.signInWithEmailAndPassword(email, password);
+        const existingUsers = await fetchUsersFor();
+        const match = existingUsers.find(u=>u.uid===cred.user.uid);
+        if(!match){
+          errEl.textContent = `الحساب ده مش مسجل في عيادة "${clinicNameRaw.trim()}". تأكد من اسم العيادة، أو اعمل حساب جديد لو دي عيادتك الأولى.`;
+          btn.disabled = false;
+          return;
+        }
+        users = existingUsers;
+        currentUser = match;
+      }
+      try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){}
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('splashScreen').classList.remove('hide');
+      await loadAll();
+      applyRolePermissions();
+      resetInactivityTimer();
+      logAction(authMode==='signup' ? 'إنشاء حساب وعيادة جديدة' : 'تسجيل دخول');
+    }catch(err){
+      console.error(err);
+      errEl.textContent = firebaseErrorMessage(err);
+    }
+    btn.disabled = false;
+  }
+  document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
+  document.getElementById('authForgotPassword').addEventListener('click', async ()=>{
+    const email = document.getElementById('authEmail').value.trim();
+    const errEl = document.getElementById('authError');
+    if(!email){ errEl.textContent = 'اكتب بريدك الإلكتروني الأول'; return; }
+    try{ await __auth.sendPasswordResetEmail(email); toast('اتبعت لينك تصفير كلمة المرور على بريدك'); }
+    catch(err){ errEl.textContent = firebaseErrorMessage(err); }
+  });
+
+  // ---------- Switch clinic (same logged-in account) ----------
   async function enterClinic(){
     const val = document.getElementById('clinicCodeInput').value;
     const sanitized = sanitizeClinicCode(val);
-    if(!sanitized){ toast('اكتب اسم أو كود صحيح'); return; }
+    const errEl = document.getElementById('clinicSwitchError');
+    errEl.textContent = '';
+    if(!sanitized){ errEl.textContent = 'اكتب اسم عيادة صحيح'; return; }
+    const fbUser = __auth.currentUser;
+    if(!fbUser){ errEl.textContent = 'لازم تسجل دخول الأول'; return; }
     clinicCode = sanitized;
-    try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){ console.error(e); }
     buildKeys();
+    const existingUsers = await fetchUsersFor();
+    let match = existingUsers.find(u=>u.uid===fbUser.uid);
+    if(!match && !existingUsers.length){
+      // clinic brand new under this account -> become its manager
+      match = { id: fbUser.uid, uid: fbUser.uid, name: fbUser.email, email: fbUser.email, role:'manager', linkedDoctor:'' };
+      existingUsers.push(match);
+      users = existingUsers;
+      await saveUsers();
+    } else if(!match){
+      errEl.textContent = 'معندكش صلاحية في العيادة دي — لازم مديرها يضيفك من تبويب "المستخدمون"';
+      return;
+    } else {
+      users = existingUsers;
+    }
+    currentUser = match;
+    try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){}
     document.getElementById('setupScreen').style.display = 'none';
     document.getElementById('splashScreen').classList.remove('hide');
-    await afterClinicReady();
+    await loadAll();
+    applyRolePermissions();
+    logAction('تبديل العيادة إلى: ' + clinicCode);
   }
   document.getElementById('clinicEnterBtn').addEventListener('click', enterClinic);
   document.getElementById('clinicCodeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') enterClinic(); });
   document.getElementById('switchClinicBtn').addEventListener('click', ()=>{
     document.getElementById('clinicCodeInput').value = clinicCode;
-    document.getElementById('cancelClinicSwitch').style.display = 'block';
+    document.getElementById('clinicSwitchError').textContent = '';
     document.getElementById('setupScreen').style.display = 'flex';
   });
   document.getElementById('cancelClinicSwitch').addEventListener('click', ()=>{
     document.getElementById('setupScreen').style.display = 'none';
-    document.getElementById('cancelClinicSwitch').style.display = 'none';
   });
-
-  // ---------- Auth: users & login ----------
-  async function afterClinicReady(){
-    try{ const r = await window.storage.get(K.users, SHARED); users = r ? JSON.parse(r.value) : []; }catch(e){ users = []; }
-    document.getElementById('splashScreen').classList.add('hide');
-    if(!users.length){
-      document.getElementById('createManagerScreen').style.display = 'flex';
-    } else {
-      renderLoginUsersList();
-      document.getElementById('loginScreen').style.display = 'flex';
-    }
-  }
-
-  document.getElementById('mgrCreateBtn').addEventListener('click', async ()=>{
-    const name = document.getElementById('mgrNameInput').value.trim();
-    const pin = document.getElementById('mgrPinInput').value.trim();
-    if(!name){ toast('اكتب اسمك'); return; }
-    if(pin && !/^\d{4}$/.test(pin)){ toast('الرقم السري لازم ٤ أرقام'); return; }
-    const pinHash = pin ? await sha256(pin) : '';
-    const u = { id: genId(), name, role:'manager', pin: pinHash, linkedDoctor:'' };
-    users.push(u);
-    await saveUsers();
-    currentUser = u;
-    document.getElementById('createManagerScreen').style.display = 'none';
-    document.getElementById('splashScreen').classList.remove('hide');
-    await loadAll();
-    applyRolePermissions();
-    resetInactivityTimer();
-    logAction('إنشاء حساب المدير الأول');
-  });
-
-  let pendingLoginUser = null;
-  function renderLoginUsersList(){
-    const box = document.getElementById('loginUsersList');
-    box.innerHTML = '';
-    document.getElementById('loginPinArea').style.display = 'none';
-    box.style.display = 'flex';
-    users.forEach(u=>{
-      const btn = document.createElement('button');
-      btn.className = 'login-user-btn';
-      btn.innerHTML = `<span>${escapeHtml(u.name)}</span><span class="login-user-role">${ROLE_LABEL[u.role]||u.role}</span>`;
-      btn.addEventListener('click', ()=>{
-        pendingLoginUser = u;
-        if(u.pin){
-          box.style.display = 'none';
-          document.getElementById('loginPinArea').style.display = 'block';
-          document.getElementById('loginPinInput').value = '';
-          document.getElementById('loginPinInput').focus();
-        } else {
-          completeLogin(u);
-        }
-      });
-      box.appendChild(btn);
-    });
-  }
-  document.getElementById('loginPinBack').addEventListener('click', ()=>{
-    document.getElementById('loginPinArea').style.display = 'none';
-    document.getElementById('loginUsersList').style.display = 'flex';
-  });
-  async function tryPinLogin(){
-    const val = document.getElementById('loginPinInput').value.trim();
-    const hash = await sha256(val);
-    if(hash !== (pendingLoginUser.pin||'')){
-      toast('الرقم السري غلط');
-      logAction(`محاولة دخول فاشلة باسم ${pendingLoginUser.name}`);
-      return;
-    }
-    completeLogin(pendingLoginUser);
-  }
-  document.getElementById('loginPinBtn').addEventListener('click', tryPinLogin);
-  document.getElementById('loginPinInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryPinLogin(); });
-
-  async function completeLogin(u){
-    currentUser = u;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('splashScreen').classList.remove('hide');
-    await loadAll();
-    applyRolePermissions();
-    resetInactivityTimer();
-    logAction('تسجيل دخول');
-  }
 
   function logout(){
     if(currentUser) logAction('تسجيل خروج');
@@ -2385,9 +2569,17 @@ window.__firestoreClinicId = '';
     if(inactivityTimer) clearTimeout(inactivityTimer);
     document.getElementById('view-dash').classList.add('active');
     document.querySelectorAll('.view').forEach(v=>{ if(v.id!=='view-dash') v.classList.remove('active'); });
-    renderLoginUsersList();
-    document.getElementById('loginScreen').style.display = 'flex';
+    __auth.signOut();
+    showAuthScreen('login');
   }
+
+  __auth.onAuthStateChanged(async function(fbUser){
+    if(fbUser){
+      await resumeSession(fbUser);
+    } else {
+      showAuthScreen('login');
+    }
+  });
 
   function applyRolePermissions(){
     if(!currentUser) return;
@@ -2483,7 +2675,7 @@ window.__firestoreClinicId = '';
         await saveEntries(); await saveDoctors(); await savePatients(); await saveSettings();
         await saveLabs(); await saveServices(); await saveAdjustments();
         rebuildPatientDatalist(); rebuildServicesDatalist();
-        renderPeriodSelect(); renderDoctorSelects(); renderDashboard(); renderRecords(); renderPatients();
+        renderPeriodSelect(); renderFilterPeriodSelect(); renderDoctorSelects(); renderDashboard(); renderRecords(); renderPatients();
         renderDoctorsSettings(); renderLabs(); renderServices(); renderCompareRangeOptions(); renderCompareChart();
         document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
         toast('تم استعادة النسخة الاحتياطية بنجاح');
@@ -2495,19 +2687,34 @@ window.__firestoreClinicId = '';
   });
   document.getElementById('addUserBtn').addEventListener('click', async ()=>{
     const name = document.getElementById('newUserName').value.trim();
+    const email = document.getElementById('newUserEmail').value.trim();
+    const password = document.getElementById('newUserPassword').value;
     const role = document.getElementById('newUserRole').value;
-    const pin = document.getElementById('newUserPin').value.trim();
     const linkedDoctor = document.getElementById('newUserLinkDoctor').value;
-    if(!name){ toast('اكتب اسم المستخدم'); return; }
-    if(pin && !/^\d{4}$/.test(pin)){ toast('الرقم السري لازم ٤ أرقام'); return; }
-    const pinHash = pin ? await sha256(pin) : '';
-    users.push({ id: genId(), name, role, pin: pinHash, linkedDoctor: role==='doctor'?linkedDoctor:'' });
-    await saveUsers();
-    document.getElementById('newUserName').value='';
-    document.getElementById('newUserPin').value='';
-    renderUsers();
-    toast('تمت إضافة المستخدم');
-    logAction(`إضافة مستخدم جديد: ${name} (${ROLE_LABEL[role]})`);
+    const errEl = document.getElementById('newUserError');
+    errEl.textContent = '';
+    if(!name){ errEl.textContent = 'اكتب اسم المستخدم'; return; }
+    if(!email || !password){ errEl.textContent = 'اكتب البريد الإلكتروني وكلمة المرور'; return; }
+    const btn = document.getElementById('addUserBtn');
+    btn.disabled = true;
+    try{
+      // بيتعمل على تطبيق ثانوي منفصل عشان متسجّلش خروج المدير الحالي
+      const cred = await __secondaryAuth.createUserWithEmailAndPassword(email, password);
+      const newUid = cred.user.uid;
+      await __secondaryAuth.signOut();
+      users.push({ id: newUid, uid: newUid, name, email, role, linkedDoctor: role==='doctor'?linkedDoctor:'' });
+      await saveUsers();
+      document.getElementById('newUserName').value='';
+      document.getElementById('newUserEmail').value='';
+      document.getElementById('newUserPassword').value='';
+      renderUsers();
+      toast('تمت إضافة المستخدم');
+      logAction(`إضافة مستخدم جديد: ${name} (${ROLE_LABEL[role]})`);
+    }catch(err){
+      console.error(err);
+      errEl.textContent = firebaseErrorMessage(err);
+    }
+    btn.disabled = false;
   });
 
   function renderAuditLog(){
@@ -2533,9 +2740,10 @@ window.__firestoreClinicId = '';
       row.className = 'doc-list-row';
       row.innerHTML = `
         <div class="doc-list-top">
-          <div class="doc-list-name">${escapeHtml(u.name)} <span class="login-user-role">${ROLE_LABEL[u.role]}</span>${u.linkedDoctor?(' · مرتبط بـ '+escapeHtml(u.linkedDoctor)):''}</div>
+          <div class="doc-list-name">${escapeHtml(u.name)} <span class="role-badge">${ROLE_LABEL[u.role]}</span></div>
           <button class="rm-btn" data-id="${u.id}" ${u.id===currentUser.id?'disabled style="opacity:.3"':''}>✕</button>
         </div>
+        <div class="stat-sub" style="margin-top:2px;">${escapeHtml(u.email||'')}${u.linkedDoctor?(' · مرتبط بـ '+escapeHtml(u.linkedDoctor)):''}</div>
       `;
       box.appendChild(row);
     });
@@ -2553,7 +2761,6 @@ window.__firestoreClinicId = '';
     });
   }
 
-  boot();
 })();
 </script>
 </body>
