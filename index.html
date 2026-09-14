@@ -853,7 +853,7 @@ window.__firestoreClinicId = '';
 
   const SUPERVISOR_EMAIL = 'ahmed.abdallah.said1991@gmail.com';
   const PLATFORM_CLINIC_ID = '__platform__';
-  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال', supervisor:'مشرف عام' };
+  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال' };
 
   // ---------- Cross-clinic KV access (للمشرف العام بس) ----------
   async function getClinicKV(clinicId, key){
@@ -883,8 +883,7 @@ window.__firestoreClinicId = '';
   const ROLE_TABS = {
     manager: ['dash','add','records','patients','doctors','labs','prices','compare','import','users','audit','notifications'],
     doctor: ['dash','add','records','patients','compare'],
-    reception: ['add','records','patients'],
-    supervisor: ['approvals']
+    reception: ['add','records','patients']
   };
   const PENDING_MANAGER_TABS = ['doctors','labs','prices','users'];
   let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
@@ -900,10 +899,16 @@ window.__firestoreClinicId = '';
   }
   function allowedTabs(){
     if(!currentUser) return [];
+    let tabs;
     if(currentUser.role==='manager' && currentUser.approved && currentUser.approved!=='approved'){
-      return PENDING_MANAGER_TABS;
+      tabs = PENDING_MANAGER_TABS.slice();
+    } else {
+      tabs = (ROLE_TABS[currentUser.role]||[]).slice();
     }
-    return ROLE_TABS[currentUser.role]||[];
+    if(currentUser.email && currentUser.email.toLowerCase()===SUPERVISOR_EMAIL && !tabs.includes('approvals')){
+      tabs.push('approvals');
+    }
+    return tabs;
   }
 
   async function logAction(action){
@@ -2531,32 +2536,15 @@ window.__firestoreClinicId = '';
     try{ const r = await window.storage.get(K.users, SHARED); return r ? JSON.parse(r.value) : []; }catch(e){ return []; }
   }
 
-  async function registerClinicForApproval(uid, clinicId, clinicNameRaw, managerName, managerEmail){
+  async function registerClinicForApproval(uid, clinicId, clinicNameRaw, managerName, managerEmail, autoApprove){
     let registry = [];
     try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
     if(registry.some(r=>r.clinicId===clinicId)) return;
-    registry.unshift({ clinicId, clinicName: clinicNameRaw.trim(), managerName, managerEmail, uid, requestedAt: new Date().toISOString(), status:'pending' });
+    registry.unshift({ clinicId, clinicName: clinicNameRaw.trim(), managerName, managerEmail, uid, requestedAt: new Date().toISOString(), status: autoApprove ? 'approved' : 'pending' });
     try{ await setClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry', JSON.stringify(registry)); }catch(e){ console.error(e); }
   }
 
   async function resumeSession(fbUser){
-    if(fbUser.email && fbUser.email.toLowerCase()===SUPERVISOR_EMAIL){
-      clinicCode = PLATFORM_CLINIC_ID;
-      buildKeys();
-      const existingUsers = await fetchUsersFor();
-      let match = existingUsers.find(u=>u.uid===fbUser.uid);
-      if(!match){
-        match = { id: fbUser.uid, uid: fbUser.uid, name:'أحمد عبدالله سعيد', email: fbUser.email, role:'supervisor', linkedDoctor:'' };
-        existingUsers.push(match);
-        users = existingUsers;
-        await saveUsers();
-      } else { users = existingUsers; }
-      currentUser = match;
-      await loadAll();
-      applyRolePermissions();
-      resetInactivityTimer();
-      return;
-    }
     let code = '';
     try{ const r = await window.storage.get(PERSONAL_KEY, false); code = r ? r.value : ''; }catch(e){ code = ''; }
     if(!code){ showAuthScreen('login', fbUser.email||''); return; }
@@ -2580,8 +2568,8 @@ window.__firestoreClinicId = '';
     const errEl = document.getElementById('authError');
     errEl.textContent = '';
     const isSupervisor = email.toLowerCase()===SUPERVISOR_EMAIL;
-    const sanitized = isSupervisor ? PLATFORM_CLINIC_ID : sanitizeClinicCode(clinicNameRaw);
-    if(!isSupervisor && !sanitized){ errEl.textContent = 'اكتب اسم العيادة'; return; }
+    const sanitized = sanitizeClinicCode(clinicNameRaw);
+    if(!sanitized){ errEl.textContent = 'اكتب اسم العيادة'; return; }
     if(!email || !password){ errEl.textContent = 'اكتب البريد الإلكتروني وكلمة المرور'; return; }
     if(authMode==='signup' && !name){ errEl.textContent = 'اكتب اسمك'; return; }
 
@@ -2596,23 +2584,23 @@ window.__firestoreClinicId = '';
         const isFirstUser = !existingUsers.length;
         const newUser = {
           id: cred.user.uid, uid: cred.user.uid, name, email,
-          role: isSupervisor ? 'supervisor' : (isFirstUser ? 'manager' : 'reception'),
+          role: isFirstUser ? 'manager' : 'reception',
           linkedDoctor: '',
-          approved: (isSupervisor || !isFirstUser) ? undefined : 'pending'
+          approved: (isFirstUser && !isSupervisor) ? 'pending' : undefined
         };
         existingUsers.push(newUser);
         users = existingUsers;
         await saveUsers();
         currentUser = newUser;
-        if(isFirstUser && !isSupervisor){
-          await registerClinicForApproval(cred.user.uid, clinicCode, clinicNameRaw, name, email);
+        if(isFirstUser){
+          await registerClinicForApproval(cred.user.uid, clinicCode, clinicNameRaw, name, email, isSupervisor);
         }
       } else {
         const cred = await __auth.signInWithEmailAndPassword(email, password);
         const existingUsers = await fetchUsersFor();
         const match = existingUsers.find(u=>u.uid===cred.user.uid);
         if(!match){
-          errEl.textContent = isSupervisor ? 'مفيش حساب مشرف مسجل بالبريد ده لسه' : `الحساب ده مش مسجل في عيادة "${clinicNameRaw.trim()}". تأكد من اسم العيادة، أو اعمل حساب جديد لو دي عيادتك الأولى.`;
+          errEl.textContent = `الحساب ده مش مسجل في عيادة "${clinicNameRaw.trim()}". تأكد من اسم العيادة، أو اعمل حساب جديد لو دي عيادتك الأولى.`;
           btn.disabled = false;
           return;
         }
@@ -2655,12 +2643,13 @@ window.__firestoreClinicId = '';
     const existingUsers = await fetchUsersFor();
     let match = existingUsers.find(u=>u.uid===fbUser.uid);
     if(!match && !existingUsers.length){
-      // clinic brand new under this account -> become its manager, pending supervisor approval
-      match = { id: fbUser.uid, uid: fbUser.uid, name: currentUser?currentUser.name:fbUser.email, email: fbUser.email, role:'manager', linkedDoctor:'', approved:'pending' };
+      // clinic brand new under this account -> become its manager
+      const isSupervisor = fbUser.email && fbUser.email.toLowerCase()===SUPERVISOR_EMAIL;
+      match = { id: fbUser.uid, uid: fbUser.uid, name: currentUser?currentUser.name:fbUser.email, email: fbUser.email, role:'manager', linkedDoctor:'', approved: isSupervisor ? undefined : 'pending' };
       existingUsers.push(match);
       users = existingUsers;
       await saveUsers();
-      await registerClinicForApproval(fbUser.uid, clinicCode, val, match.name, fbUser.email);
+      await registerClinicForApproval(fbUser.uid, clinicCode, val, match.name, fbUser.email, isSupervisor);
     } else if(!match){
       errEl.textContent = 'معندكش صلاحية في العيادة دي — لازم مديرها يضيفك من تبويب "المستخدمون"';
       return;
@@ -2729,7 +2718,8 @@ window.__firestoreClinicId = '';
     const userEl = document.getElementById('topbarUser');
     userEl.style.display = 'flex';
     const bellHtml = currentUser.role==='manager' ? `<button id="notifBellBtn">🔔<span id="notifBadge" class="notif-badge" style="display:none;"></span></button>` : '';
-    userEl.innerHTML = `أهلاً، <b>${escapeHtml(currentUser.name)}</b> · ${ROLE_LABEL[currentUser.role]} ${bellHtml} <button id="logoutBtn">تسجيل خروج</button>`;
+    const isSup = currentUser.email && currentUser.email.toLowerCase()===SUPERVISOR_EMAIL;
+    userEl.innerHTML = `أهلاً، <b>${escapeHtml(currentUser.name)}</b> · ${ROLE_LABEL[currentUser.role]}${isSup?' · <b>مشرف عام</b>':''} ${bellHtml} <button id="logoutBtn">تسجيل خروج</button>`;
     document.getElementById('logoutBtn').addEventListener('click', logout);
     if(currentUser.role==='manager'){
       document.getElementById('notifBellBtn').addEventListener('click', ()=> switchTab('notifications'));
