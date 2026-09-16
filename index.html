@@ -306,17 +306,22 @@
   input[type=file]{color:var(--ink-soft);font-size:12.5px;font-family:inherit;margin-top:8px;}
 
   /* Print receipt */
+  @page{ size: A4; margin: 14mm; }
   #printReceipt{display:none;}
   @media print{
-    body *{ visibility:hidden; }
-    #printReceipt, #printReceipt *{ visibility:visible; }
+    html, body{ height:auto !important; margin:0; padding:0; background:#fff !important; }
+    #splashScreen, #authScreen, #setupScreen, #app, .toast{ display:none !important; }
     #printReceipt{
-      display:block !important;position:absolute;top:0;left:0;width:100%;
-      padding:24px;background:#fff;color:#000;
+      display:block !important;
+      position:static; width:100%;
+      padding:0; margin:0;
+      background:#fff; color:#000;
     }
     .receipt-clinic{font-size:20px;font-weight:900;text-align:center;}
+    .print-app-name{font-size:11px;font-weight:700;text-align:center;color:#888;letter-spacing:1px;text-transform:uppercase;}
+    .print-dev-credit{text-align:center;margin-top:6px;font-size:10.5px;color:#999;}
     .receipt-sub{text-align:center;font-size:12px;color:#555;margin-bottom:16px;}
-    .receipt-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ddd;font-size:13px;}
+    .receipt-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ddd;font-size:13px;page-break-inside:avoid;}
     .receipt-row b{font-weight:700;}
     .receipt-row.total{font-weight:900;font-size:15px;border-top:2px solid #000;border-bottom:none;margin-top:8px;padding-top:10px;}
     .receipt-divider{border-top:1px dashed #999;margin:10px 0;}
@@ -386,6 +391,7 @@
     <button class="tab-btn active" data-view="dash">الرئيسية</button>
     <button class="tab-btn" data-view="add">إضافة</button>
     <button class="tab-btn" data-view="records">السجل</button>
+    <button class="tab-btn" data-view="expenses">المصروفات</button>
     <button class="tab-btn" data-view="patients">المرضى</button>
     <button class="tab-btn" data-view="doctors">الأطباء</button>
     <button class="tab-btn" data-view="labs">المعامل</button>
@@ -394,7 +400,7 @@
     <button class="tab-btn" data-view="import">استيراد</button>
     <button class="tab-btn" data-view="users">المستخدمون</button>
     <button class="tab-btn" data-view="audit">سجل النشاط</button>
-    <button class="tab-btn" data-view="approvals">الموافقات</button>
+    <button class="tab-btn" data-view="approvals">الموافقات <span id="approvalsBadge" class="notif-badge" style="display:none;position:static;margin-right:2px;"></span></button>
   </div>
 
   <!-- DASHBOARD -->
@@ -537,6 +543,45 @@
       <input type="date" id="filterTo" title="إلى تاريخ">
     </div>
     <div id="recordsList"></div>
+  </div>
+
+  <!-- EXPENSES -->
+  <div class="view" id="view-expenses">
+    <h2 class="section-title">المصروفات <span class="count-badge" id="expensesCount"></span></h2>
+    <div class="stat-sub" style="margin-bottom:12px;">تسجيل المصروفات اليومية — بتتخصم من الإيراد كمعلومة منفصلة، من غير ما تغيّر القيم الأصلية المسجلة.</div>
+    <div class="import-step">
+      <h3 id="expenseFormTitle">إضافة مصروف</h3>
+      <div class="edit-banner" id="expenseEditBanner">
+        <span>وضع التعديل: بتعدل مصروف موجود</span>
+        <button type="button" id="cancelExpenseEditBtn">إلغاء</button>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="date" id="expDate" value=""></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="expAmount" placeholder="القيمة"></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;">
+          <select id="expCategory">
+            <option value="مستلزمات طبية">مستلزمات طبية</option>
+            <option value="إيجار">إيجار</option>
+            <option value="مرتبات">مرتبات</option>
+            <option value="فواتير (كهرباء/مياه/إنترنت)">فواتير (كهرباء/مياه/إنترنت)</option>
+            <option value="صيانة">صيانة</option>
+            <option value="تسويق">تسويق</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="expDesc" placeholder="البيان / الوصف"></div>
+      </div>
+      <button class="btn-mini" id="addExpenseBtn" style="width:100%;">حفظ المصروف</button>
+    </div>
+    <div class="search-row">
+      <input type="text" id="expenseSearch" placeholder="ابحث في البيان أو البند">
+    </div>
+    <div class="filter-row">
+      <select id="expenseFilterPeriod"><option value="all">كل التواريخ</option></select>
+    </div>
+    <div id="expensesList"></div>
   </div>
 
   <!-- PATIENTS -->
@@ -844,7 +889,7 @@ window.__firestoreClinicId = '';
       entries:`dz-${clinicCode}-entries`, doctors:`dz-${clinicCode}-doctors`, patients:`dz-${clinicCode}-patients`,
       settings:`dz-${clinicCode}-settings`, labs:`dz-${clinicCode}-labs`, services:`dz-${clinicCode}-services`,
       adjustments:`dz-${clinicCode}-adjustments`, users:`dz-${clinicCode}-users`, audit:`dz-${clinicCode}-audit`,
-      notifications:`dz-${clinicCode}-notifications`
+      notifications:`dz-${clinicCode}-notifications`, expenses:`dz-${clinicCode}-expenses`
     };
   }
   function sanitizeClinicCode(raw){
@@ -881,15 +926,16 @@ window.__firestoreClinicId = '';
     }
   }
   const ROLE_TABS = {
-    manager: ['dash','add','records','patients','doctors','labs','prices','compare','import','users','audit','notifications'],
+    manager: ['dash','add','records','expenses','patients','doctors','labs','prices','compare','import','users','audit','notifications'],
     doctor: ['dash','add','records','patients','compare'],
-    reception: ['add','records','patients']
+    reception: ['add','records','expenses','patients']
   };
   const PENDING_MANAGER_TABS = ['doctors','labs','prices','users'];
   let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
   let currentUser = null;  // {id, name, role, pin, linkedDoctor}
   let auditLog = [];       // [{ts, user, role, action}]
   let notifications = [];  // [{id, ts, message, read}] — تنبيهات للمدير عند تعديل أي عملية
+  let expenses = [];       // [{id, date, amount, category, description, recordedBy, createdAt}]
 
   function canManageEntry(e){
     if(!currentUser) return false;
@@ -1002,6 +1048,11 @@ window.__firestoreClinicId = '';
     if(key.startsWith('year:')){ const y=key.slice(5); return adjustments.filter(a=>periodKeyForDate(a.date).startsWith(y+'-')); }
     return adjustments.filter(a => periodKeyForDate(a.date) === key);
   }
+  function expensesInPeriod(key){
+    if(key==='all') return expenses;
+    if(key.startsWith('year:')){ const y=key.slice(5); return expenses.filter(x=>periodKeyForDate(x.date).startsWith(y+'-')); }
+    return expenses.filter(x => periodKeyForDate(x.date) === key);
+  }
 
   async function loadAll(){
     document.getElementById('topbarSub').textContent = 'جاري تحميل البيانات…';
@@ -1029,6 +1080,7 @@ window.__firestoreClinicId = '';
     try{ const r = await window.storage.get(K.adjustments, SHARED); adjustments = r ? JSON.parse(r.value) : []; }catch(e){ adjustments = []; }
     try{ const r = await window.storage.get(K.audit, SHARED); auditLog = r ? JSON.parse(r.value) : []; }catch(e){ auditLog = []; }
     try{ const r = await window.storage.get(K.notifications, SHARED); notifications = r ? JSON.parse(r.value) : []; }catch(e){ notifications = []; }
+    try{ const r = await window.storage.get(K.expenses, SHARED); expenses = r ? JSON.parse(r.value) : []; }catch(e){ expenses = []; }
     document.getElementById('topbarSub').textContent = entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية';
 
     selectedPeriod = currentPeriodKey();
@@ -1038,6 +1090,8 @@ window.__firestoreClinicId = '';
     rebuildServicesDatalist();
     renderDashboard();
     renderRecords();
+    renderExpenseFilterPeriod();
+    renderExpenses();
     renderPatients();
     renderDoctorsSettings();
     renderLabs();
@@ -1060,6 +1114,7 @@ window.__firestoreClinicId = '';
   async function saveAdjustments(){ try{ await window.storage.set(K.adjustments, JSON.stringify(adjustments), SHARED); }catch(e){ console.error(e); } }
   async function saveUsers(){ try{ await window.storage.set(K.users, JSON.stringify(users), SHARED); }catch(e){ console.error(e); } }
   async function saveNotifications(){ try{ await window.storage.set(K.notifications, JSON.stringify(notifications), SHARED); }catch(e){ console.error(e); } }
+  async function saveExpenses(){ try{ await window.storage.set(K.expenses, JSON.stringify(expenses), SHARED); }catch(e){ console.error(e); } }
   async function notifyManagers(message){
     notifications.unshift({ id: genId(), ts: new Date().toISOString(), message, read:false });
     if(notifications.length>200) notifications = notifications.slice(0,200);
@@ -1073,6 +1128,7 @@ window.__firestoreClinicId = '';
     document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id==='view-'+name));
     if(name==='dash') renderDashboard();
     if(name==='records') renderRecords();
+    if(name==='expenses') renderExpenses();
     if(name==='patients') renderPatients();
     if(name==='labs') renderLabs();
     if(name==='prices') renderServices();
@@ -1373,11 +1429,24 @@ window.__firestoreClinicId = '';
     if(printBtn){ printEntry(printBtn.dataset.id); return; }
   });
 
+  function printHeaderHtml(subtitle){
+    return `
+      <div class="print-app-name">Dental Zone</div>
+      <div class="receipt-clinic">${escapeHtml(settings.clinicName || 'عيادة الأسنان')}</div>
+      <div class="receipt-sub">${escapeHtml(subtitle)}</div>
+    `;
+  }
+  function printFooterHtml(extra){
+    return `
+      ${extra ? `<div class="receipt-footer">${extra}</div>` : ''}
+      <div class="print-dev-credit">Developer: Dr. Ahmed Abdallah</div>
+    `;
+  }
+
   function buildReceiptHtml(e){
     const remaining = e.value - (e.discount||0) - e.paid;
     return `
-      <div class="receipt-clinic">${escapeHtml(settings.clinicName || 'Dental Zone')}</div>
-      <div class="receipt-sub">إيصال دفع</div>
+      ${printHeaderHtml('إيصال دفع')}
       <div class="receipt-row"><span>التاريخ</span><b>${escapeHtml(e.date)}</b></div>
       <div class="receipt-row"><span>اسم المريض</span><b>${escapeHtml(e.patient)}</b></div>
       ${e.medNum ? `<div class="receipt-row"><span>الرقم الطبي الموحد</span><b>${escapeHtml(e.medNum)}</b></div>` : ''}
@@ -1390,7 +1459,7 @@ window.__firestoreClinicId = '';
       ${e.discount ? `<div class="receipt-row"><span>الخصم</span><b>${fmt(e.discount)} ج.م</b></div>` : ''}
       <div class="receipt-row"><span>المدفوع</span><b>${fmt(e.paid)} ج.م</b></div>
       <div class="receipt-row total"><span>المتبقي</span><b>${fmt(remaining)} ج.م</b></div>
-      <div class="receipt-footer">شكرًا لزيارتكم</div>
+      ${printFooterHtml('شكرًا لزيارتكم')}
     `;
   }
   function printEntry(id){
@@ -1409,12 +1478,11 @@ window.__firestoreClinicId = '';
       <div class="receipt-row"><span>${escapeHtml(w.date)} — ${escapeHtml(w.itemName)}${w.patient?(' ('+escapeHtml(w.patient)+')'):''}</span><b>${w.qty} × ${fmt(w.unitPrice)} = ${fmt(w.total)}</b></div>
     `).join('');
     document.getElementById('printReceiptContent').innerHTML = `
-      <div class="receipt-clinic">${escapeHtml(settings.clinicName || 'Dental Zone')}</div>
-      <div class="receipt-sub">فاتورة معمل: ${escapeHtml(lab.name)}</div>
+      ${printHeaderHtml('فاتورة معمل: ' + lab.name)}
       ${rows || '<div class="receipt-row"><span>لا يوجد شغل مسجل</span></div>'}
       <div class="receipt-divider"></div>
       <div class="receipt-row total"><span>الإجمالي المستحق للمعمل</span><b>${fmt(total)} ج.م</b></div>
-      <div class="receipt-footer">تاريخ الطباعة: ${new Date().toISOString().slice(0,10)}</div>
+      ${printFooterHtml('تاريخ الطباعة: ' + new Date().toISOString().slice(0,10))}
     `;
     window.print();
   }
@@ -1439,14 +1507,20 @@ window.__firestoreClinicId = '';
     document.getElementById('statProcedures').textContent = fmt(totalCheckupProc) + ' ج.م';
     document.getElementById('statCrowns').textContent = fmt(totalCrownsGross) + ' ج.م';
 
+    const scopedExpenses = expensesInPeriod(selectedPeriod);
+    const totalExpenses = scopedExpenses.reduce((s,x)=>s+x.amount,0);
+    const netAfterExpenses = grandTotal - totalExpenses;
+
     document.getElementById('finTable').innerHTML = `
       <div class="fin-row"><span>إجمالي التركيبات (قبل خصم المعمل)</span><b>${fmt(totalCrownsGross)}</b></div>
       <div class="fin-row"><span>تكلفة المعامل</span><b class="neg">- ${fmt(totalLabCost)}</b></div>
       <div class="fin-row total"><span>صافي دخل التركيبات</span><b>${fmt(netCrowns)}</b></div>
       <div class="fin-row"><span>إجمالي الكشف والتدخلات</span><b>${fmt(totalCheckupProc)}</b></div>
-      <div class="fin-row total grand"><span>الإجمالي النهائي</span><b>${fmt(grandTotal)}</b></div>
+      <div class="fin-row total grand"><span>الإجمالي النهائي (قبل المصروفات)</span><b>${fmt(grandTotal)}</b></div>
       <div class="fin-row pct"><span>نسبة التركيبات الصافية من الإجمالي</span><b>${crownSharePct.toFixed(1)}٪</b></div>
       <div class="fin-row pct"><span>نسبة الكشف والتدخلات من الإجمالي</span><b>${checkupProcSharePct.toFixed(1)}٪</b></div>
+      <div class="fin-row"><span>إجمالي المصروفات</span><b class="neg">- ${fmt(totalExpenses)}</b></div>
+      <div class="fin-row total grand"><span>صافي الإيراد النهائي (بعد المصروفات)</span><b>${fmt(netAfterExpenses)}</b></div>
     `;
 
     // per-doctor gross amounts by bucket
@@ -1601,6 +1675,126 @@ window.__firestoreClinicId = '';
   document.getElementById('filterFrom').addEventListener('change', renderRecords);
   document.getElementById('filterTo').addEventListener('change', renderRecords);
   document.getElementById('recordSearch').addEventListener('input', renderRecords);
+
+  // ---------- Expenses ----------
+  let editingExpenseId = null;
+  document.getElementById('expDate').value = new Date().toISOString().slice(0,10);
+
+  function resetExpenseForm(){
+    document.getElementById('expDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('expAmount').value = '';
+    document.getElementById('expCategory').value = 'مستلزمات طبية';
+    document.getElementById('expDesc').value = '';
+    editingExpenseId = null;
+    document.getElementById('expenseEditBanner').style.display = 'none';
+    document.getElementById('expenseFormTitle').textContent = 'إضافة مصروف';
+    document.getElementById('addExpenseBtn').textContent = 'حفظ المصروف';
+  }
+  document.getElementById('cancelExpenseEditBtn').addEventListener('click', resetExpenseForm);
+
+  document.getElementById('addExpenseBtn').addEventListener('click', async ()=>{
+    const date = document.getElementById('expDate').value || new Date().toISOString().slice(0,10);
+    const amount = parseFloat(document.getElementById('expAmount').value);
+    const category = document.getElementById('expCategory').value;
+    const description = document.getElementById('expDesc').value.trim();
+    if(!amount || amount<=0){ toast('اكتب قيمة المصروف'); return; }
+    if(editingExpenseId){
+      const idx = expenses.findIndex(x=>x.id===editingExpenseId);
+      if(idx>-1){
+        expenses[idx] = Object.assign({}, expenses[idx], { date, amount, category, description, editedBy: currentUser?currentUser.name:'—', editedAt: new Date().toISOString() });
+      }
+      toast('تم تعديل المصروف');
+      logAction(`تعديل مصروف: ${category} · ${fmt(amount)} ج.م`);
+    } else {
+      expenses.unshift({ id: genId(), date, amount, category, description, recordedBy: currentUser?currentUser.name:'—', createdAt: new Date().toISOString() });
+      toast('تم حفظ المصروف');
+      logAction(`إضافة مصروف: ${category} · ${fmt(amount)} ج.م`);
+    }
+    await saveExpenses();
+    resetExpenseForm();
+    renderExpenses();
+    renderDashboard();
+    renderExpenseFilterPeriod();
+  });
+
+  function canManageExpense(){ return currentUser && currentUser.role==='manager'; }
+
+  function buildExpenseCard(x){
+    const div = document.createElement('div');
+    div.className = 'record';
+    div.innerHTML = `
+      <div class="record-top">
+        <div>
+          <div class="record-name">${escapeHtml(x.category)}</div>
+          <div class="record-date">${escapeHtml(x.date)} · سجّله ${escapeHtml(x.recordedBy||'—')}${x.editedBy?(' · آخر تعديل: '+escapeHtml(x.editedBy)):''}</div>
+        </div>
+        <div class="record-badge badge-تركيبات">${fmt(x.amount)} ج.م</div>
+      </div>
+      ${x.description ? `<div class="record-proc">${escapeHtml(x.description)}</div>` : ''}
+      ${canManageExpense() ? `
+        <div class="record-foot">
+          <div></div>
+          <div class="record-actions">
+            <button class="edit-expense-btn" data-id="${x.id}">تعديل</button>
+            <button class="del-expense-btn" data-id="${x.id}">حذف</button>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    return div;
+  }
+
+  function renderExpenses(){
+    const q = norm(document.getElementById('expenseSearch').value);
+    const periodVal = document.getElementById('expenseFilterPeriod').value;
+    const list = expensesInPeriod(periodVal).filter(x =>
+      !q || norm(x.category).includes(q) || norm(x.description).includes(q)
+    ).sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?1:-1));
+    const total = list.reduce((s,x)=>s+x.amount,0);
+    document.getElementById('expensesCount').textContent = expenses.length + ' مصروف' + (fmt(total)?(' · إجمالي المعروض ' + fmt(total) + ' ج.م'):'');
+    const box = document.getElementById('expensesList');
+    box.innerHTML = '';
+    if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد مصروفات مطابقة</div>'; return; }
+    list.forEach(x=>box.appendChild(buildExpenseCard(x)));
+  }
+  function renderExpenseFilterPeriod(){
+    const sel = document.getElementById('expenseFilterPeriod');
+    const prev = sel.value || 'all';
+    sel.innerHTML = '<option value="all">كل التواريخ</option>' + buildPeriodOptionsHtml();
+    sel.value = prev;
+  }
+  document.getElementById('expenseFilterPeriod').addEventListener('change', renderExpenses);
+  document.getElementById('expenseSearch').addEventListener('input', renderExpenses);
+
+  document.addEventListener('click', function(e){
+    const editBtn = e.target.closest('.edit-expense-btn');
+    if(editBtn){
+      const x = expenses.find(v=>v.id===editBtn.dataset.id);
+      if(!x) return;
+      document.getElementById('expDate').value = x.date;
+      document.getElementById('expAmount').value = x.amount;
+      document.getElementById('expCategory').value = x.category;
+      document.getElementById('expDesc').value = x.description||'';
+      editingExpenseId = x.id;
+      document.getElementById('expenseEditBanner').style.display = 'flex';
+      document.getElementById('expenseFormTitle').textContent = 'تعديل مصروف';
+      document.getElementById('addExpenseBtn').textContent = 'حفظ التعديل';
+      switchTab('expenses');
+      return;
+    }
+    const delBtn = e.target.closest('.del-expense-btn');
+    if(delBtn){
+      const x = expenses.find(v=>v.id===delBtn.dataset.id);
+      if(!x) return;
+      if(!confirm(`تأكيد حذف مصروف ${x.category} بقيمة ${fmt(x.amount)} ج.م؟`)) return;
+      expenses = expenses.filter(v=>v.id!==delBtn.dataset.id);
+      saveExpenses();
+      logAction(`حذف مصروف: ${x.category} · ${fmt(x.amount)} ج.م`);
+      renderExpenses();
+      renderDashboard();
+      return;
+    }
+  });
 
   // ---------- Patients ----------
   function renderPatients(){
@@ -2488,9 +2682,20 @@ window.__firestoreClinicId = '';
     labRows.push({'المعمل':'إجمالي المعامل','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalLabCost});
     labRows.push({'المعمل':'صافي التركيبات بعد الخصم','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalCrownsGross - totalLabCost});
     labRows.push({'المعمل':'إجمالي الكشف والتدخلات','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalCheckupProc});
-    labRows.push({'المعمل':'الإجمالي النهائي','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': (totalCrownsGross-totalLabCost)+totalCheckupProc});
+    const grandTotalX = (totalCrownsGross-totalLabCost)+totalCheckupProc;
+    labRows.push({'المعمل':'الإجمالي النهائي (قبل المصروفات)','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': grandTotalX});
     const ws3 = XLSX.utils.json_to_sheet(labRows);
     XLSX.utils.book_append_sheet(wb, ws3, 'المعامل');
+
+    const scopedExpensesX = expensesInPeriod(selectedPeriod);
+    const expenseRows = scopedExpensesX.slice().sort((a,b)=>a.date<b.date?-1:1).map(x=>({
+      'التاريخ': x.date, 'البند': x.category, 'البيان': x.description||'', 'القيمة': x.amount, 'سجّله': x.recordedBy||''
+    }));
+    const totalExpensesX = scopedExpensesX.reduce((s,x)=>s+x.amount,0);
+    expenseRows.push({'التاريخ':'','البند':'إجمالي المصروفات','البيان':'','القيمة': totalExpensesX,'سجّله':''});
+    expenseRows.push({'التاريخ':'','البند':'صافي الإيراد النهائي (بعد المصروفات)','البيان':'','القيمة': grandTotalX-totalExpensesX,'سجّله':''});
+    const ws4 = XLSX.utils.json_to_sheet(expenseRows);
+    XLSX.utils.book_append_sheet(wb, ws4, 'المصروفات');
 
     const label = selectedPeriod==='all' ? 'كل-الفترات' : periodLabel(selectedPeriod).replace(/[^0-9a-zA-Zء-ي]+/g,'-');
     try{ XLSX.writeFile(wb, `Dental-Zone-${label}.xlsx`); toast('تم تجهيز ملف Excel'); }
@@ -2721,6 +2926,7 @@ window.__firestoreClinicId = '';
     const isSup = currentUser.email && currentUser.email.toLowerCase()===SUPERVISOR_EMAIL;
     userEl.innerHTML = `أهلاً، <b>${escapeHtml(currentUser.name)}</b> · ${ROLE_LABEL[currentUser.role]}${isSup?' · <b>مشرف عام</b>':''} ${bellHtml} <button id="logoutBtn">تسجيل خروج</button>`;
     document.getElementById('logoutBtn').addEventListener('click', logout);
+    if(isSup) refreshApprovalsBadge();
     if(currentUser.role==='manager'){
       document.getElementById('notifBellBtn').addEventListener('click', ()=> switchTab('notifications'));
       renderNotifBadge();
@@ -2895,6 +3101,17 @@ window.__firestoreClinicId = '';
     toast(decision==='approved' ? 'تم قبول العيادة' : 'تم رفض العيادة');
     logAction(`${decision==='approved'?'قبول':'رفض'} عيادة: ${entry.clinicName}`);
     renderApprovals();
+    refreshApprovalsBadge();
+  }
+
+  async function refreshApprovalsBadge(){
+    const badge = document.getElementById('approvalsBadge');
+    if(!badge) return;
+    let registry = [];
+    try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
+    const pending = registry.filter(r=>r.status==='pending').length;
+    badge.style.display = pending ? 'inline-flex' : 'none';
+    badge.textContent = pending>99 ? '99+' : pending;
   }
 
   async function renderApprovals(){
