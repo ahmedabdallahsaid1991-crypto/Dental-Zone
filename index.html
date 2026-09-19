@@ -196,6 +196,7 @@
   .mini-table th{color:var(--ink-soft);font-weight:700;font-size:11.5px;}
   .mini-table tfoot td{font-weight:900;color:var(--gold);border-top:2px solid var(--teal-soft);border-bottom:none;}
   .row-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;}
+  .row-edit{border:none;background:none;color:var(--gold);cursor:pointer;font-size:13px;}
 
   /* Compare */
   .chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:16px;}
@@ -744,6 +745,8 @@
             <option value="manager">مدير (صلاحية كاملة)</option>
             <option value="doctor">طبيب</option>
             <option value="reception">استقبال</option>
+            <option value="purchasing">مدير مشتريات</option>
+            <option value="inventory">أمين مخزن</option>
           </select>
         </div>
         <div class="field" style="margin-bottom:8px;"><input type="password" id="newUserPassword" placeholder="كلمة مرور (٦ أحرف على الأقل)"></div>
@@ -898,7 +901,7 @@ window.__firestoreClinicId = '';
 
   const SUPERVISOR_EMAIL = 'ahmed.abdallah.said1991@gmail.com';
   const PLATFORM_CLINIC_ID = '__platform__';
-  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال' };
+  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال', purchasing:'مدير مشتريات', inventory:'أمين مخزن' };
 
   // ---------- Cross-clinic KV access (للمشرف العام بس) ----------
   async function getClinicKV(clinicId, key){
@@ -928,7 +931,9 @@ window.__firestoreClinicId = '';
   const ROLE_TABS = {
     manager: ['dash','add','records','expenses','patients','doctors','labs','prices','compare','import','users','audit','notifications'],
     doctor: ['dash','add','records','patients','compare'],
-    reception: ['add','records','expenses','patients']
+    reception: ['add','records','expenses','patients'],
+    purchasing: ['prices'],
+    inventory: ['prices']
   };
   const PENDING_MANAGER_TABS = ['doctors','labs','prices','users'];
   let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
@@ -1487,6 +1492,69 @@ window.__firestoreClinicId = '';
     window.print();
   }
 
+  // ---------- Doctor payroll ----------
+  function computeDoctorPayroll(doctorName, periodKey){
+    const scopedAll = entriesInPeriod(periodKey);
+    const scoped = scopedAll.filter(e=>e.doctor===doctorName);
+    const sp = getSplits(doctorName);
+
+    const totalCrownsGrossAll = scopedAll.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const totalLabCost = labWorkInPeriod(periodKey).reduce((s,w)=>s+w.total,0);
+    const netCrownsAll = totalCrownsGrossAll - totalLabCost;
+
+    const scopedLabWork = labWorkInPeriod(periodKey);
+    const attributedForDoctor = scopedLabWork.filter(w=>w.doctor===doctorName).reduce((s,w)=>s+w.total,0);
+    const attributedAll = scopedLabWork.filter(w=>w.doctor && doctorNames().includes(w.doctor)).reduce((s,w)=>s+w.total,0);
+    const unattributed = totalLabCost - attributedAll;
+
+    const crownGrossForDoctor = scoped.filter(e=>e.type==='تركيبات').reduce((s,e)=>s+e.paid,0);
+    const docLabCost = attributedForDoctor + (totalCrownsGrossAll>0 ? (crownGrossForDoctor/totalCrownsGrossAll)*unattributed : 0);
+    const crownNetShareForDoctor = crownGrossForDoctor - docLabCost;
+    const netRatio = crownGrossForDoctor>0 ? (crownNetShareForDoctor/crownGrossForDoctor) : 0;
+
+    const rows = scoped.slice().sort((a,b)=>a.date<b.date?-1:1).map(e=>{
+      let payout, pct;
+      if(e.type==='تركيبات'){ payout = e.paid*netRatio*(sp.crown.doctor/100); pct = sp.crown.doctor; }
+      else { payout = e.paid*(sp.checkup.doctor/100); pct = sp.checkup.doctor; }
+      return { date:e.date, patient:e.patient, medNum:e.medNum, proc:e.proc, type:e.type, value:e.paid, pct, payout };
+    });
+    const grossRevenue = scoped.reduce((s,e)=>s+e.paid,0);
+    const totalPayout = rows.reduce((s,r)=>s+r.payout,0);
+    const adjList = adjustmentsInPeriod(periodKey).filter(a=>a.doctorName===doctorName);
+    const totalAdj = adjList.reduce((s,a)=>s+a.amount,0);
+    return { rows, adjList, grossRevenue, totalPayout, totalAdj, net: totalPayout+totalAdj };
+  }
+
+  function printDoctorPayroll(doctorName, mode){
+    const data = computeDoctorPayroll(doctorName, selectedPeriod);
+    const periodText = selectedPeriod==='all' ? 'كل الفترات' : periodLabel(selectedPeriod);
+    let body = '';
+    if(mode==='detailed'){
+      body = data.rows.map(r=>`
+        <div class="receipt-row"><span>${escapeHtml(r.date)} — ${escapeHtml(r.patient)} — ${escapeHtml(r.proc)}</span><b>${fmt(r.value)} × ${r.pct}٪ = ${fmt(r.payout)}</b></div>
+      `).join('') || '<div class="receipt-row"><span>لا توجد عمليات في هذه الفترة</span></div>';
+      body += `<div class="receipt-divider"></div>`;
+      body += `<div class="receipt-row"><span>إجمالي مستحق الإجراءات</span><b>${fmt(data.totalPayout)} ج.م</b></div>`;
+    } else {
+      body = `
+        <div class="receipt-row"><span>إجمالي إيرادات الطبيب</span><b>${fmt(data.grossRevenue)} ج.م</b></div>
+        <div class="receipt-row"><span>إجمالي مستحق الطبيب</span><b>${fmt(data.totalPayout)} ج.م</b></div>
+      `;
+    }
+    if(data.adjList.length){
+      body += data.adjList.map(a=>`<div class="receipt-row"><span>${escapeHtml(a.date)} — تسوية (${escapeHtml(a.kind||'أخرى')})${a.note?(' — '+escapeHtml(a.note)):''}</span><b class="${a.amount<0?'':''}">${a.amount<0?'':'+'}${fmt(a.amount)} ج.م</b></div>`).join('');
+    }
+    document.getElementById('printReceiptContent').innerHTML = `
+      ${printHeaderHtml((mode==='detailed'?'كشف مفصل — ':'كشف مختصر — ') + 'راتب الطبيب: ' + doctorName)}
+      <div class="receipt-row"><span>الفترة</span><b>${escapeHtml(periodText)}</b></div>
+      <div class="receipt-divider"></div>
+      ${body}
+      <div class="receipt-row total"><span>صافي مستحق الطبيب</span><b>${fmt(data.net)} ج.م</b></div>
+      ${printFooterHtml('تاريخ الطباعة: ' + new Date().toISOString().slice(0,10))}
+    `;
+    window.print();
+  }
+
   // ---------- Dashboard ----------
   function renderDashboard(){
     const scoped = entriesInPeriod(selectedPeriod);
@@ -1940,8 +2008,18 @@ window.__firestoreClinicId = '';
         ${splitGroupHtml(name, 'checkup', sp.checkup, 'الكشف والتدخلات')}
         ${splitGroupHtml(name, 'crown', sp.crown, 'التركيبات (بعد خصم المعمل)')}
         ${adjustmentsHtml(name)}
+        <div class="row2" style="margin-top:10px;">
+          <button class="btn-mini gold print-payroll-detailed" data-name="${escapeHtml(name)}">🖨 كشف مفصل</button>
+          <button class="btn-mini print-payroll-summary" data-name="${escapeHtml(name)}">🖨 كشف مختصر</button>
+        </div>
       `;
       box.appendChild(row);
+    });
+    box.querySelectorAll('.print-payroll-detailed').forEach(b=>{
+      b.addEventListener('click', ()=> printDoctorPayroll(b.dataset.name, 'detailed'));
+    });
+    box.querySelectorAll('.print-payroll-summary').forEach(b=>{
+      b.addEventListener('click', ()=> printDoctorPayroll(b.dataset.name, 'summary'));
     });
     box.querySelectorAll('.rm-btn').forEach(b=>{
       b.addEventListener('click', async ()=>{
@@ -2038,6 +2116,27 @@ window.__firestoreClinicId = '';
   });
 
   function labTotal(labId){ return labsData.work.filter(w=>w.labId===labId).reduce((s,w)=>s+w.total,0); }
+  let editingLabWorkId = {}; // { [labId]: workEntryId } — تعديل صف شغل معمل
+  function resetLabWorkForm(lid){
+    delete editingLabWorkId[lid];
+    const box = document.getElementById('labsList');
+    const dateInp = box.querySelector(`.lab-work-date[data-lid="${lid}"]`);
+    if(dateInp) dateInp.value = new Date().toISOString().slice(0,10);
+    const patientInp = box.querySelector(`.lab-work-patient[data-lid="${lid}"]`);
+    if(patientInp) patientInp.value = '';
+    const doctorSel = box.querySelector(`.lab-work-doctor[data-lid="${lid}"]`);
+    if(doctorSel) doctorSel.value = '';
+    const itemSel = box.querySelector(`.lab-work-item[data-lid="${lid}"]`);
+    if(itemSel) itemSel.value = '';
+    const qtyInp = box.querySelector(`.lab-work-qty[data-lid="${lid}"]`);
+    if(qtyInp) qtyInp.value = 1;
+    const discInp = box.querySelector(`.lab-work-disc[data-lid="${lid}"]`);
+    if(discInp) discInp.value = '';
+    const banner = box.querySelector(`.lab-work-edit-banner[data-lid="${lid}"]`);
+    if(banner) banner.style.display = 'none';
+    const addBtn = box.querySelector(`.lab-add-work[data-lid="${lid}"]`);
+    if(addBtn) addBtn.textContent = 'إضافة';
+  }
 
   function renderLabs(){
     document.getElementById('labsCount').textContent = labsData.labs.length + ' معمل · ' + labsData.work.length + ' حالة';
@@ -2108,10 +2207,14 @@ window.__firestoreClinicId = '';
             <div class="field" style="margin-bottom:8px;"><input type="number" class="lab-work-disc" data-lid="${lab.id}" placeholder="خصم% (اختياري)" min="0" max="100"></div>
             <button class="btn-mini lab-add-work" data-lid="${lab.id}">إضافة</button>
           </div>
+          <div class="edit-banner lab-work-edit-banner" data-lid="${lab.id}" style="display:none;">
+            <span>وضع التعديل: بتعدل صف موجود</span>
+            <button type="button" class="cancel-lab-work-edit" data-lid="${lab.id}">إلغاء</button>
+          </div>
           <table class="mini-table">
             <thead><tr><th>التاريخ</th><th>المريض</th><th>الطبيب</th><th>الصنف</th><th>العدد</th><th>خصم%</th><th>الإجمالي</th><th></th></tr></thead>
             <tbody>
-              ${work.map(w=>`<tr><td>${escapeHtml(w.date)}</td><td>${escapeHtml(w.patient||'')}</td><td>${escapeHtml(w.doctor||'—')}</td><td>${escapeHtml(w.itemName)}</td><td>${w.qty}</td><td>${w.discPct?w.discPct+'٪':'—'}</td><td>${fmt(w.total)}</td><td><button class="row-del lab-work-del" data-id="${w.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">لا يوجد شغل مسجل بعد</td></tr>'}
+              ${work.map(w=>`<tr><td>${escapeHtml(w.date)}</td><td>${escapeHtml(w.patient||'')}</td><td>${escapeHtml(w.doctor||'—')}</td><td>${escapeHtml(w.itemName)}</td><td>${w.qty}</td><td>${w.discPct?w.discPct+'٪':'—'}</td><td>${fmt(w.total)}</td><td><button class="row-edit lab-work-edit" data-id="${w.id}" data-lid="${lab.id}">✎</button> <button class="row-del lab-work-del" data-id="${w.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">لا يوجد شغل مسجل بعد</td></tr>'}
             </tbody>
             <tfoot><tr><td colspan="6">الإجمالي</td><td colspan="2">${fmt(total)}</td></tr></tfoot>
           </table>
@@ -2236,15 +2339,54 @@ window.__firestoreClinicId = '';
         const qty = parseFloat(qtyInp.value)||1;
         const discPct = Math.max(0, Math.min(100, parseFloat(discInp.value)||0));
         const total = qty*item.price*(1-discPct/100);
-        labsData.work.push({
-          id: genId(), labId: lid, date: dateInp.value || new Date().toISOString().slice(0,10),
-          patient: patientInp.value.trim(), doctor: doctorSel.value||'', itemId: item.id, itemName: item.name, qty, unitPrice: item.price, discPct, total
-        });
+        const editId = editingLabWorkId[lid];
+        if(editId){
+          const idx = labsData.work.findIndex(w=>w.id===editId);
+          if(idx>-1){
+            labsData.work[idx] = Object.assign({}, labsData.work[idx], {
+              date: dateInp.value || new Date().toISOString().slice(0,10),
+              patient: patientInp.value.trim(), doctor: doctorSel.value||'', itemId: item.id, itemName: item.name,
+              qty, unitPrice: item.price, discPct, total,
+              editedBy: currentUser?currentUser.name:'—', editedAt: new Date().toISOString()
+            });
+          }
+          delete editingLabWorkId[lid];
+          resetLabWorkForm(lid);
+          toast('تم تعديل الصف');
+          const labObj = labsData.labs.find(l=>l.id===lid);
+          logAction(`تعديل صف معمل: ${labObj?labObj.name:lid} · ${item.name}`);
+        } else {
+          labsData.work.push({
+            id: genId(), labId: lid, date: dateInp.value || new Date().toISOString().slice(0,10),
+            patient: patientInp.value.trim(), doctor: doctorSel.value||'', itemId: item.id, itemName: item.name, qty, unitPrice: item.price, discPct, total
+          });
+          toast('تمت إضافة الصنف لسجل المعمل');
+        }
         await saveLabs();
         renderLabs();
         renderDashboard();
-        toast('تمت إضافة الصنف لسجل المعمل');
       });
+    });
+    box.querySelectorAll('.lab-work-edit').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const lid = btn.dataset.lid;
+        const w = labsData.work.find(x=>x.id===btn.dataset.id);
+        if(!w) return;
+        box.querySelector(`.lab-work-date[data-lid="${lid}"]`).value = w.date;
+        box.querySelector(`.lab-work-patient[data-lid="${lid}"]`).value = w.patient||'';
+        box.querySelector(`.lab-work-doctor[data-lid="${lid}"]`).value = w.doctor||'';
+        box.querySelector(`.lab-work-item[data-lid="${lid}"]`).value = w.itemId;
+        box.querySelector(`.lab-work-qty[data-lid="${lid}"]`).value = w.qty;
+        box.querySelector(`.lab-work-disc[data-lid="${lid}"]`).value = w.discPct||'';
+        editingLabWorkId[lid] = w.id;
+        const banner = box.querySelector(`.lab-work-edit-banner[data-lid="${lid}"]`);
+        if(banner) banner.style.display = 'flex';
+        const addBtn = box.querySelector(`.lab-add-work[data-lid="${lid}"]`);
+        if(addBtn) addBtn.textContent = 'حفظ التعديل';
+      });
+    });
+    box.querySelectorAll('.cancel-lab-work-edit').forEach(btn=>{
+      btn.addEventListener('click', ()=> resetLabWorkForm(btn.dataset.lid));
     });
     box.querySelectorAll('.print-lab-invoice').forEach(btn=>{
       btn.addEventListener('click', ()=>{ printLabInvoice(btn.dataset.lid); });
@@ -2619,6 +2761,19 @@ window.__firestoreClinicId = '';
   });
 
   // ---------- Excel export ----------
+  function sheetWithHeader(rows, periodKey){
+    const periodText = periodKey==='all' ? 'كل الفترات' : periodLabel(periodKey);
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Dental Zone'],
+      [settings.clinicName || 'عيادة الأسنان'],
+      ['Developer: Dr. Ahmed Abdallah'],
+      ['الفترة: ' + periodText],
+      []
+    ]);
+    XLSX.utils.sheet_add_json(ws, rows, { origin: -1, skipHeader:false });
+    return ws;
+  }
+
   document.getElementById('exportBtn').addEventListener('click', function(){
     const scoped = entriesInPeriod(selectedPeriod);
     if(!scoped.length){ toast('لا توجد بيانات لهذه الفترة'); return; }
@@ -2629,7 +2784,7 @@ window.__firestoreClinicId = '';
       'الطبيب': e.doctor, 'النوع': e.type, 'الاجراء': e.proc, 'القيمة': e.value, 'الخصم': e.discount||0,
       'المدفوع': e.paid, 'المتبقي': e.value - (e.discount||0) - e.paid
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const ws = sheetWithHeader(rows, selectedPeriod);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'العمليات');
 
@@ -2671,7 +2826,7 @@ window.__firestoreClinicId = '';
       };
     });
     sumRows.push({'الطبيب':'الإجمالي الكلي','الإجمالي المحصّل': total, 'نسبة من الدخل %': 100, 'تسويات':'', 'نصيب الطبيب': Number(sumDoc.toFixed(2)), 'نصيب الإدارة': Number(sumMe.toFixed(2)), 'نصيب العيادة': Number(sumHosp.toFixed(2))});
-    const ws2 = XLSX.utils.json_to_sheet(sumRows);
+    const ws2 = sheetWithHeader(sumRows, selectedPeriod);
     XLSX.utils.book_append_sheet(wb, ws2, 'ملخص الأطباء');
 
     const labWork = labWorkInPeriod(selectedPeriod);
@@ -2684,7 +2839,7 @@ window.__firestoreClinicId = '';
     labRows.push({'المعمل':'إجمالي الكشف والتدخلات','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': totalCheckupProc});
     const grandTotalX = (totalCrownsGross-totalLabCost)+totalCheckupProc;
     labRows.push({'المعمل':'الإجمالي النهائي (قبل المصروفات)','التاريخ':'','المريض':'','الصنف':'','العدد':'','سعر الوحدة':'','الإجمالي': grandTotalX});
-    const ws3 = XLSX.utils.json_to_sheet(labRows);
+    const ws3 = sheetWithHeader(labRows, selectedPeriod);
     XLSX.utils.book_append_sheet(wb, ws3, 'المعامل');
 
     const scopedExpensesX = expensesInPeriod(selectedPeriod);
@@ -2694,7 +2849,7 @@ window.__firestoreClinicId = '';
     const totalExpensesX = scopedExpensesX.reduce((s,x)=>s+x.amount,0);
     expenseRows.push({'التاريخ':'','البند':'إجمالي المصروفات','البيان':'','القيمة': totalExpensesX,'سجّله':''});
     expenseRows.push({'التاريخ':'','البند':'صافي الإيراد النهائي (بعد المصروفات)','البيان':'','القيمة': grandTotalX-totalExpensesX,'سجّله':''});
-    const ws4 = XLSX.utils.json_to_sheet(expenseRows);
+    const ws4 = sheetWithHeader(expenseRows, selectedPeriod);
     XLSX.utils.book_append_sheet(wb, ws4, 'المصروفات');
 
     const label = selectedPeriod==='all' ? 'كل-الفترات' : periodLabel(selectedPeriod).replace(/[^0-9a-zA-Zء-ي]+/g,'-');
