@@ -197,6 +197,36 @@
   .mini-table tfoot td{font-weight:900;color:var(--gold);border-top:2px solid var(--teal-soft);border-bottom:none;}
   .row-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;}
   .row-edit{border:none;background:none;color:var(--gold);cursor:pointer;font-size:13px;}
+  .inv-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;}
+  .inv-card.low-stock{border-color:var(--rose);background:var(--rose-soft);}
+  .inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .inv-name{font-size:14.5px;font-weight:700;}
+  .inv-meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .inv-qty{font-size:15px;font-weight:900;color:var(--gold);}
+  .inv-card.low-stock .inv-qty{color:var(--rose);}
+  .inv-actions{display:flex;gap:10px;margin-top:9px;flex-wrap:wrap;}
+  .inv-actions button{border:none;background:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .inv-in-btn{color:#2ea05a;}
+  .inv-out-btn{color:var(--rose);}
+  .inv-edit-btn{color:var(--gold);}
+  .inv-del-btn{color:var(--rose);}
+
+  /* Treatment plan modal */
+  #planModal{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center;}
+  #planModal.open{display:flex;}
+  .plan-modal-box{background:var(--paper);width:100%;max-width:640px;max-height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;}
+  .plan-modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--card);border-bottom:1px solid var(--line);font-weight:900;color:var(--gold);font-size:15px;}
+  .plan-modal-head button{border:none;background:none;color:var(--ink-soft);font-size:18px;cursor:pointer;}
+  .plan-modal-body{overflow-y:auto;padding:16px;}
+  .plan-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;cursor:pointer;}
+  .plan-card .p-date{font-size:11.5px;color:var(--ink-soft);}
+  .plan-card .p-diag{font-size:14px;font-weight:700;margin-top:3px;}
+  .plan-card .p-sum{font-size:12px;color:var(--gold);margin-top:5px;}
+  .plan-sub-list{margin-top:8px;}
+  .plan-sub-item{display:flex;justify-content:space-between;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px;}
+  .plan-sub-item .psi-main{flex:1;}
+  .plan-sub-item .psi-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:13px;margin-right:8px;}
+  .status-select{font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;}
 
   /* Compare */
   .chart-wrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:16px;}
@@ -397,6 +427,7 @@
     <button class="tab-btn" data-view="doctors">الأطباء</button>
     <button class="tab-btn" data-view="labs">المعامل</button>
     <button class="tab-btn" data-view="prices">الأسعار</button>
+    <button class="tab-btn" data-view="inventory">المخزن</button>
     <button class="tab-btn" data-view="compare">مقارنات</button>
     <button class="tab-btn" data-view="import">استيراد</button>
     <button class="tab-btn" data-view="users">المستخدمون</button>
@@ -663,6 +694,48 @@
     <div id="servicesList"></div>
   </div>
 
+  <!-- INVENTORY -->
+  <div class="view" id="view-inventory">
+    <h2 class="section-title">المخزن <span class="count-badge" id="inventoryCount"></span></h2>
+    <div class="stat-grid" style="margin-bottom:14px;">
+      <div class="stat-card">
+        <div class="stat-label">قيمة المخزون الإجمالية</div>
+        <div class="stat-value" id="inventoryTotalValue">٠</div>
+      </div>
+      <div class="stat-card" style="border-color:var(--rose);">
+        <div class="stat-label">أصناف تحت الحد الأدنى</div>
+        <div class="stat-value" id="inventoryLowCount">٠</div>
+      </div>
+    </div>
+    <div class="import-step">
+      <h3 id="invFormTitle">إضافة صنف جديد</h3>
+      <div class="edit-banner" id="invEditBanner">
+        <span>وضع التعديل: بتعدل صنف موجود</span>
+        <button type="button" id="cancelInvEditBtn">إلغاء</button>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invName" placeholder="اسم الصنف"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invCode" placeholder="الكود (اختياري)"></div>
+      </div>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invQty" placeholder="الكمية الحالية"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invUnit" placeholder="الوحدة (علبة/قطعة..)"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invMinQty" placeholder="الحد الأدنى"></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invSupplier" placeholder="اسم الشركة/المورد"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invUnitPrice" placeholder="سعر الوحدة"></div>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="invNotes" placeholder="ملاحظات (اختياري)"></div>
+      <button class="btn-mini" id="addInvBtn" style="width:100%;">حفظ الصنف</button>
+    </div>
+    <div class="search-row">
+      <input type="text" id="invSearch" placeholder="ابحث باسم الصنف أو الكود أو المورد">
+    </div>
+    <button class="btn-mini gold" id="printInventoryBtn" style="width:100%;margin-bottom:12px;">🖨 طباعة تقرير المخزون</button>
+    <div id="inventoryList"></div>
+  </div>
+
   <!-- COMPARE -->
   <div class="view" id="view-compare">
     <h2 class="section-title">مقارنة الدخل بين الفترات</h2>
@@ -798,6 +871,17 @@
 <div class="toast" id="toast"></div>
 <div id="printReceipt"><div id="printReceiptContent"></div></div>
 
+<!-- TREATMENT PLAN MODAL -->
+<div id="planModal">
+  <div class="plan-modal-box">
+    <div class="plan-modal-head">
+      <span id="planModalTitle">خطط العلاج</span>
+      <button id="closePlanModalBtn">✕</button>
+    </div>
+    <div class="plan-modal-body" id="planModalBody"></div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    FIREBASE SETUP — عدّل القيم دي من إعدادات مشروعك على Firebase
@@ -892,7 +976,9 @@ window.__firestoreClinicId = '';
       entries:`dz-${clinicCode}-entries`, doctors:`dz-${clinicCode}-doctors`, patients:`dz-${clinicCode}-patients`,
       settings:`dz-${clinicCode}-settings`, labs:`dz-${clinicCode}-labs`, services:`dz-${clinicCode}-services`,
       adjustments:`dz-${clinicCode}-adjustments`, users:`dz-${clinicCode}-users`, audit:`dz-${clinicCode}-audit`,
-      notifications:`dz-${clinicCode}-notifications`, expenses:`dz-${clinicCode}-expenses`
+      notifications:`dz-${clinicCode}-notifications`, expenses:`dz-${clinicCode}-expenses`,
+      inventoryItems:`dz-${clinicCode}-inventoryItems`, inventoryTx:`dz-${clinicCode}-inventoryTx`,
+      treatmentPlans:`dz-${clinicCode}-treatmentPlans`
     };
   }
   function sanitizeClinicCode(raw){
@@ -929,11 +1015,11 @@ window.__firestoreClinicId = '';
     }
   }
   const ROLE_TABS = {
-    manager: ['dash','add','records','expenses','patients','doctors','labs','prices','compare','import','users','audit','notifications'],
+    manager: ['dash','add','records','expenses','patients','doctors','labs','prices','inventory','compare','import','users','audit','notifications'],
     doctor: ['dash','add','records','patients','compare'],
     reception: ['add','records','expenses','patients'],
-    purchasing: ['prices'],
-    inventory: ['prices']
+    purchasing: ['prices','inventory'],
+    inventory: ['prices','inventory']
   };
   const PENDING_MANAGER_TABS = ['doctors','labs','prices','users'];
   let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
@@ -941,6 +1027,9 @@ window.__firestoreClinicId = '';
   let auditLog = [];       // [{ts, user, role, action}]
   let notifications = [];  // [{id, ts, message, read}] — تنبيهات للمدير عند تعديل أي عملية
   let expenses = [];       // [{id, date, amount, category, description, recordedBy, createdAt}]
+  let inventoryItems = []; // [{id,name,code,qty,unit,supplier,unitPrice,addedDate,minQty,notes}]
+  let inventoryTx = [];    // [{id,itemId,type:'in'|'out',qty,date,note,recordedBy}]
+  let treatmentPlans = []; // [{id,patientId,patientName,date,doctor,diagnosis,notes,procedures,medications,sessions,paid,createdBy,createdAt}]
 
   function canManageEntry(e){
     if(!currentUser) return false;
@@ -1086,6 +1175,9 @@ window.__firestoreClinicId = '';
     try{ const r = await window.storage.get(K.audit, SHARED); auditLog = r ? JSON.parse(r.value) : []; }catch(e){ auditLog = []; }
     try{ const r = await window.storage.get(K.notifications, SHARED); notifications = r ? JSON.parse(r.value) : []; }catch(e){ notifications = []; }
     try{ const r = await window.storage.get(K.expenses, SHARED); expenses = r ? JSON.parse(r.value) : []; }catch(e){ expenses = []; }
+    try{ const r = await window.storage.get(K.inventoryItems, SHARED); inventoryItems = r ? JSON.parse(r.value) : []; }catch(e){ inventoryItems = []; }
+    try{ const r = await window.storage.get(K.inventoryTx, SHARED); inventoryTx = r ? JSON.parse(r.value) : []; }catch(e){ inventoryTx = []; }
+    try{ const r = await window.storage.get(K.treatmentPlans, SHARED); treatmentPlans = r ? JSON.parse(r.value) : []; }catch(e){ treatmentPlans = []; }
     document.getElementById('topbarSub').textContent = entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية';
 
     selectedPeriod = currentPeriodKey();
@@ -1097,6 +1189,7 @@ window.__firestoreClinicId = '';
     renderRecords();
     renderExpenseFilterPeriod();
     renderExpenses();
+    renderInventory();
     renderPatients();
     renderDoctorsSettings();
     renderLabs();
@@ -1120,6 +1213,9 @@ window.__firestoreClinicId = '';
   async function saveUsers(){ try{ await window.storage.set(K.users, JSON.stringify(users), SHARED); }catch(e){ console.error(e); } }
   async function saveNotifications(){ try{ await window.storage.set(K.notifications, JSON.stringify(notifications), SHARED); }catch(e){ console.error(e); } }
   async function saveExpenses(){ try{ await window.storage.set(K.expenses, JSON.stringify(expenses), SHARED); }catch(e){ console.error(e); } }
+  async function saveInventoryItems(){ try{ await window.storage.set(K.inventoryItems, JSON.stringify(inventoryItems), SHARED); }catch(e){ console.error(e); } }
+  async function saveInventoryTx(){ try{ await window.storage.set(K.inventoryTx, JSON.stringify(inventoryTx), SHARED); }catch(e){ console.error(e); } }
+  async function saveTreatmentPlans(){ try{ await window.storage.set(K.treatmentPlans, JSON.stringify(treatmentPlans), SHARED); }catch(e){ console.error(e); } }
   async function notifyManagers(message){
     notifications.unshift({ id: genId(), ts: new Date().toISOString(), message, read:false });
     if(notifications.length>200) notifications = notifications.slice(0,200);
@@ -1134,6 +1230,7 @@ window.__firestoreClinicId = '';
     if(name==='dash') renderDashboard();
     if(name==='records') renderRecords();
     if(name==='expenses') renderExpenses();
+    if(name==='inventory') renderInventory();
     if(name==='patients') renderPatients();
     if(name==='labs') renderLabs();
     if(name==='prices') renderServices();
@@ -1910,7 +2007,13 @@ window.__firestoreClinicId = '';
       box.appendChild(card);
       if(isOpen){
         const bodyEl = card.querySelector('.patient-body');
-        if(!pEntries.length){ bodyEl.innerHTML = '<div class="empty-note">لا توجد عمليات مسجلة</div>'; }
+        const planBtn = document.createElement('button');
+        planBtn.className = 'btn-mini gold';
+        planBtn.style.cssText = 'width:100%;margin:10px 0;';
+        planBtn.textContent = '📋 خطة العلاج';
+        planBtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); openPatientPlansModal(p.id, p.name); });
+        bodyEl.appendChild(planBtn);
+        if(!pEntries.length){ bodyEl.innerHTML += '<div class="empty-note">لا توجد عمليات مسجلة</div>'; }
         else pEntries.slice().sort((a,b)=>a.date<b.date?1:-1).forEach(e=>bodyEl.appendChild(buildRecordCard(e)));
       }
     });
@@ -2519,6 +2622,386 @@ window.__firestoreClinicId = '';
         renderServices();
       });
     });
+  }
+
+  // ---------- Inventory ----------
+  let editingInvId = null;
+  function resetInvForm(){
+    document.getElementById('invName').value = '';
+    document.getElementById('invCode').value = '';
+    document.getElementById('invQty').value = '';
+    document.getElementById('invUnit').value = '';
+    document.getElementById('invMinQty').value = '';
+    document.getElementById('invSupplier').value = '';
+    document.getElementById('invUnitPrice').value = '';
+    document.getElementById('invNotes').value = '';
+    editingInvId = null;
+    document.getElementById('invEditBanner').style.display = 'none';
+    document.getElementById('invFormTitle').textContent = 'إضافة صنف جديد';
+    document.getElementById('addInvBtn').textContent = 'حفظ الصنف';
+  }
+  document.getElementById('cancelInvEditBtn').addEventListener('click', resetInvForm);
+
+  document.getElementById('addInvBtn').addEventListener('click', async ()=>{
+    const name = document.getElementById('invName').value.trim();
+    const code = document.getElementById('invCode').value.trim();
+    const qty = parseFloat(document.getElementById('invQty').value)||0;
+    const unit = document.getElementById('invUnit').value.trim();
+    const minQty = parseFloat(document.getElementById('invMinQty').value)||0;
+    const supplier = document.getElementById('invSupplier').value.trim();
+    const unitPrice = parseFloat(document.getElementById('invUnitPrice').value)||0;
+    const notes = document.getElementById('invNotes').value.trim();
+    if(!name){ toast('اكتب اسم الصنف'); return; }
+    if(editingInvId){
+      const idx = inventoryItems.findIndex(x=>x.id===editingInvId);
+      if(idx>-1) inventoryItems[idx] = Object.assign({}, inventoryItems[idx], { name, code, unit, minQty, supplier, unitPrice, notes });
+      toast('تم تعديل الصنف');
+      logAction(`تعديل صنف مخزن: ${name}`);
+    } else {
+      inventoryItems.unshift({ id: genId(), name, code, qty, unit, supplier, unitPrice, addedDate: new Date().toISOString().slice(0,10), minQty, notes, addedBy: currentUser?currentUser.name:'—' });
+      toast('تم إضافة الصنف');
+      logAction(`إضافة صنف مخزن: ${name}`);
+    }
+    await saveInventoryItems();
+    resetInvForm();
+    renderInventory();
+  });
+
+  function canManageInventory(){ return currentUser && ['manager','inventory'].includes(currentUser.role); }
+
+  function itemStockValue(item){ return item.qty * item.unitPrice; }
+
+  function renderInventory(){
+    const q = norm(document.getElementById('invSearch').value);
+    const list = inventoryItems.filter(x => !q || norm(x.name).includes(q) || norm(x.code).includes(q) || norm(x.supplier).includes(q));
+    const totalValue = inventoryItems.reduce((s,x)=>s+itemStockValue(x),0);
+    const lowStock = inventoryItems.filter(x=>x.minQty>0 && x.qty<=x.minQty);
+    document.getElementById('inventoryCount').textContent = inventoryItems.length + ' صنف';
+    document.getElementById('inventoryTotalValue').textContent = fmt(totalValue) + ' ج.م';
+    document.getElementById('inventoryLowCount').textContent = lowStock.length;
+    const box = document.getElementById('inventoryList');
+    box.innerHTML = '';
+    if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد أصناف مطابقة</div>'; return; }
+    list.forEach(x=>{
+      const isLow = x.minQty>0 && x.qty<=x.minQty;
+      const card = document.createElement('div');
+      card.className = 'inv-card' + (isLow?' low-stock':'');
+      card.innerHTML = `
+        <div class="inv-top">
+          <div>
+            <div class="inv-name">${escapeHtml(x.name)}${x.code?(' <span style="color:var(--ink-soft);font-weight:400;font-size:11px;">('+escapeHtml(x.code)+')</span>'):''}</div>
+            <div class="inv-meta">${x.supplier?('المورد: '+escapeHtml(x.supplier)+' · '):''}سعر الوحدة ${fmt(x.unitPrice)} ج.م${isLow?' · ⚠️ تحت الحد الأدنى':''}</div>
+            ${x.notes?`<div class="inv-meta">${escapeHtml(x.notes)}</div>`:''}
+          </div>
+          <div style="text-align:left;">
+            <div class="inv-qty">${x.qty} ${escapeHtml(x.unit||'')}</div>
+            <div class="inv-meta">القيمة: ${fmt(itemStockValue(x))} ج.م</div>
+          </div>
+        </div>
+        <div class="inv-actions">
+          <button class="inv-in-btn" data-id="${x.id}">+ وارد</button>
+          <button class="inv-out-btn" data-id="${x.id}">- منصرف</button>
+          ${canManageInventory() ? `<button class="inv-edit-btn" data-id="${x.id}">تعديل</button><button class="inv-del-btn" data-id="${x.id}">حذف</button>` : ''}
+        </div>
+      `;
+      box.appendChild(card);
+    });
+    box.querySelectorAll('.inv-in-btn').forEach(b=>b.addEventListener('click', ()=>promptStockTx(b.dataset.id,'in')));
+    box.querySelectorAll('.inv-out-btn').forEach(b=>b.addEventListener('click', ()=>promptStockTx(b.dataset.id,'out')));
+    box.querySelectorAll('.inv-edit-btn').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const x = inventoryItems.find(v=>v.id===b.dataset.id);
+        if(!x) return;
+        document.getElementById('invName').value = x.name;
+        document.getElementById('invCode').value = x.code||'';
+        document.getElementById('invQty').value = x.qty;
+        document.getElementById('invQty').disabled = true;
+        document.getElementById('invUnit').value = x.unit||'';
+        document.getElementById('invMinQty').value = x.minQty||'';
+        document.getElementById('invSupplier').value = x.supplier||'';
+        document.getElementById('invUnitPrice').value = x.unitPrice||'';
+        document.getElementById('invNotes').value = x.notes||'';
+        editingInvId = x.id;
+        document.getElementById('invEditBanner').style.display = 'flex';
+        document.getElementById('invFormTitle').textContent = 'تعديل صنف (الكمية تتغيّر من وارد/منصرف بس)';
+        document.getElementById('addInvBtn').textContent = 'حفظ التعديل';
+      });
+    });
+    box.querySelectorAll('.inv-del-btn').forEach(b=>{
+      b.addEventListener('click', async ()=>{
+        const x = inventoryItems.find(v=>v.id===b.dataset.id);
+        if(!x) return;
+        if(!confirm(`تأكيد حذف صنف "${x.name}" نهائيًا؟`)) return;
+        inventoryItems = inventoryItems.filter(v=>v.id!==b.dataset.id);
+        inventoryTx = inventoryTx.filter(t=>t.itemId!==b.dataset.id);
+        await saveInventoryItems();
+        await saveInventoryTx();
+        logAction(`حذف صنف مخزن: ${x.name}`);
+        renderInventory();
+      });
+    });
+  }
+
+  async function promptStockTx(itemId, type){
+    const item = inventoryItems.find(x=>x.id===itemId);
+    if(!item) return;
+    const qtyStr = prompt(type==='in' ? `كمية الوارد (${item.unit||''}):` : `كمية المنصرف (${item.unit||''}):`, '1');
+    if(qtyStr===null) return;
+    const qty = parseFloat(qtyStr);
+    if(!qty || qty<=0){ toast('اكتب كمية صحيحة'); return; }
+    if(type==='out' && qty>item.qty){ toast('الكمية المتاحة أقل من كده'); return; }
+    const note = prompt('ملاحظة (اختياري):', '') || '';
+    item.qty = type==='in' ? item.qty+qty : item.qty-qty;
+    inventoryTx.unshift({ id: genId(), itemId, type, qty, date: new Date().toISOString().slice(0,10), note, recordedBy: currentUser?currentUser.name:'—' });
+    await saveInventoryItems();
+    await saveInventoryTx();
+    logAction(`${type==='in'?'وارد':'منصرف'} مخزن: ${item.name} × ${qty}`);
+    renderInventory();
+  }
+  document.getElementById('invSearch').addEventListener('input', renderInventory);
+
+  document.getElementById('printInventoryBtn').addEventListener('click', ()=>{
+    const rows = inventoryItems.map(x=>`
+      <div class="receipt-row"><span>${escapeHtml(x.name)}${x.code?(' ('+escapeHtml(x.code)+')'):''} — ${x.qty} ${escapeHtml(x.unit||'')}</span><b>${fmt(itemStockValue(x))} ج.م</b></div>
+    `).join('');
+    const totalValue = inventoryItems.reduce((s,x)=>s+itemStockValue(x),0);
+    document.getElementById('printReceiptContent').innerHTML = `
+      ${printHeaderHtml('تقرير المخزون')}
+      ${rows || '<div class="receipt-row"><span>لا توجد أصناف</span></div>'}
+      <div class="receipt-divider"></div>
+      <div class="receipt-row total"><span>قيمة المخزون الإجمالية</span><b>${fmt(totalValue)} ج.م</b></div>
+      ${printFooterHtml('تاريخ الطباعة: ' + new Date().toISOString().slice(0,10))}
+    `;
+    window.print();
+  });
+
+  // ---------- Treatment plans ----------
+  let currentPlanPatientId = null;
+  let currentPlanDraft = null;
+
+  function closePlanModal(){ document.getElementById('planModal').classList.remove('open'); currentPlanDraft = null; }
+  document.getElementById('closePlanModalBtn').addEventListener('click', closePlanModal);
+
+  function openPatientPlansModal(patientId, patientName){
+    currentPlanPatientId = patientId;
+    document.getElementById('planModalTitle').textContent = 'خطط علاج: ' + patientName;
+    const plans = treatmentPlans.filter(pl=>pl.patientId===patientId).sort((a,b)=>b.date<a.date?-1:1);
+    const body = document.getElementById('planModalBody');
+    body.innerHTML = `
+      <button class="btn-mini" id="newPlanBtn" style="width:100%;margin-bottom:12px;">➕ إنشاء خطة علاج جديدة</button>
+      <div id="plansListArea"></div>
+    `;
+    const listArea = document.getElementById('plansListArea');
+    if(!plans.length){ listArea.innerHTML = '<div class="empty-note">لا توجد خطط علاج مسجلة لهذا المريض</div>'; }
+    else{
+      plans.forEach(pl=>{
+        const total = pl.procedures.reduce((s,x)=>s+x.total,0);
+        const done = pl.procedures.filter(x=>x.status==='تم').length;
+        const card = document.createElement('div');
+        card.className = 'plan-card';
+        card.innerHTML = `
+          <div class="p-date">${escapeHtml(pl.date)} · د. ${escapeHtml(pl.doctor||'—')}</div>
+          <div class="p-diag">${escapeHtml(pl.diagnosis||'بدون تشخيص مسجل')}</div>
+          <div class="p-sum">الإجمالي ${fmt(total)} ج.م · المنفذ ${done}/${pl.procedures.length} إجراء</div>
+        `;
+        card.addEventListener('click', ()=> openPlanEditor(pl));
+        listArea.appendChild(card);
+      });
+    }
+    document.getElementById('newPlanBtn').addEventListener('click', ()=>{
+      const patient = patients.find(p=>p.id===patientId);
+      openPlanEditor({
+        id: null, patientId, patientName: patient?patient.name:patientName,
+        date: new Date().toISOString().slice(0,10), doctor:'', diagnosis:'', notes:'',
+        procedures: [], medications: [], sessions: [], paid: 0
+      });
+    });
+    document.getElementById('planModal').classList.add('open');
+  }
+
+  function planServiceOptionsHtml(){
+    return '<option value="">اختر من قائمة الأسعار</option>' + services.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} (${fmt(s.price)})</option>`).join('');
+  }
+  function planDoctorOptionsHtml(selected){
+    return doctorNames().map(n=>`<option value="${escapeHtml(n)}" ${n===selected?'selected':''}>${escapeHtml(n)}</option>`).join('');
+  }
+
+  function openPlanEditor(plan){
+    currentPlanDraft = JSON.parse(JSON.stringify(plan)); // نسخة مستقلة للتعديل
+    renderPlanEditor();
+  }
+
+  function renderPlanEditor(){
+    const d = currentPlanDraft;
+    const totalPlan = d.procedures.reduce((s,x)=>s+x.total,0);
+    const remaining = totalPlan - (d.paid||0);
+    const doneCount = d.procedures.filter(x=>x.status==='تم').length;
+    const remainCount = d.procedures.filter(x=>x.status!=='تم' && x.status!=='ملغي').length;
+
+    document.getElementById('planModalTitle').textContent = 'خطة علاج: ' + d.patientName;
+    const body = document.getElementById('planModalBody');
+    body.innerHTML = `
+      <button class="btn-mini" id="backToPlansListBtn" style="margin-bottom:12px;">◀ رجوع للقائمة</button>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="date" id="planDate" value="${d.date}"></div>
+        <div class="field" style="margin-bottom:8px;"><select id="planDoctor"><option value="">اختر الطبيب</option>${planDoctorOptionsHtml(d.doctor)}</select></div>
+      </div>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="planDiagnosis" placeholder="التشخيص" value="${escapeHtml(d.diagnosis||'')}"></div>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="planNotes" placeholder="ملاحظات الطبيب" value="${escapeHtml(d.notes||'')}"></div>
+
+      <h3 class="sub-title">الإجراءات العلاجية</h3>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><select id="planProcSelect">${planServiceOptionsHtml()}</select></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" min="1" id="planProcQty" placeholder="العدد" value="1"></div>
+        <button class="btn-mini" id="addPlanProcBtn">إضافة</button>
+      </div>
+      <div class="plan-sub-list" id="planProcList"></div>
+
+      <h3 class="sub-title">العلاج الدوائي</h3>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="planMedName" placeholder="اسم الدواء"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="planMedDosage" placeholder="الجرعة"></div>
+      </div>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="planMedFreq" placeholder="عدد المرات"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="planMedDuration" placeholder="المدة"></div>
+        <button class="btn-mini" id="addPlanMedBtn">إضافة</button>
+      </div>
+      <div class="plan-sub-list" id="planMedList"></div>
+
+      <h3 class="sub-title">حجز الجلسات</h3>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="date" id="planSessDate"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="time" id="planSessTime"></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="planSessProc" placeholder="الإجراء المخطط للجلسة"></div>
+        <div class="field" style="margin-bottom:8px;"><select id="planSessDoctor"><option value="">الطبيب</option>${planDoctorOptionsHtml('')}</select></div>
+      </div>
+      <button class="btn-mini" id="addPlanSessBtn" style="width:100%;margin-bottom:8px;">إضافة جلسة</button>
+      <div class="plan-sub-list" id="planSessList"></div>
+
+      <h3 class="sub-title">ملخص الخطة</h3>
+      <div class="fin-table" id="planSummary" style="margin-bottom:14px;"></div>
+      <div class="field" style="margin-bottom:10px;"><label>المدفوع من قيمة الخطة</label><input type="number" min="0" step="0.01" id="planPaid" value="${d.paid||0}"></div>
+      <button class="btn-primary" id="savePlanBtn">حفظ الخطة</button>
+      ${d.id ? '<button class="btn-mini" id="deletePlanBtn" style="width:100%;margin-top:8px;color:var(--rose);border-color:var(--rose);">حذف الخطة</button>' : ''}
+    `;
+
+    function refreshSubLists(){
+      document.getElementById('planProcList').innerHTML = currentPlanDraft.procedures.map((p,i)=>`
+        <div class="plan-sub-item">
+          <span class="psi-main">${escapeHtml(p.name)} — ${p.qty} × ${fmt(p.price)} = <b>${fmt(p.total)}</b></span>
+          <select class="status-select" data-i="${i}">
+            ${['مخطط','تم','مؤجل','ملغي'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="psi-del" data-kind="proc" data-i="${i}">✕</button>
+        </div>
+      `).join('') || '<div class="empty-note">لا توجد إجراءات مضافة</div>';
+      document.getElementById('planMedList').innerHTML = currentPlanDraft.medications.map((m,i)=>`
+        <div class="plan-sub-item"><span class="psi-main">${escapeHtml(m.name)} — ${escapeHtml(m.dosage)} — ${escapeHtml(m.frequency)} لمدة ${escapeHtml(m.duration)}</span><button class="psi-del" data-kind="med" data-i="${i}">✕</button></div>
+      `).join('') || '<div class="empty-note">لا توجد أدوية مضافة</div>';
+      document.getElementById('planSessList').innerHTML = currentPlanDraft.sessions.map((s,i)=>`
+        <div class="plan-sub-item"><span class="psi-main">${escapeHtml(s.date)} ${escapeHtml(s.time||'')} — ${escapeHtml(s.proc)} — د.${escapeHtml(s.doctor||'')}</span><button class="psi-del" data-kind="sess" data-i="${i}">✕</button></div>
+      `).join('') || '<div class="empty-note">لا توجد جلسات محجوزة</div>';
+
+      body.querySelectorAll('.status-select').forEach(sel=>{
+        sel.addEventListener('change', ()=>{ currentPlanDraft.procedures[Number(sel.dataset.i)].status = sel.value; refreshSummary(); });
+      });
+      body.querySelectorAll('.psi-del').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const i = Number(btn.dataset.i);
+          if(btn.dataset.kind==='proc') currentPlanDraft.procedures.splice(i,1);
+          if(btn.dataset.kind==='med') currentPlanDraft.medications.splice(i,1);
+          if(btn.dataset.kind==='sess') currentPlanDraft.sessions.splice(i,1);
+          refreshSubLists(); refreshSummary();
+        });
+      });
+    }
+    function refreshSummary(){
+      const total = currentPlanDraft.procedures.reduce((s,x)=>s+x.total,0);
+      const paid = parseFloat(document.getElementById('planPaid').value)||0;
+      const done = currentPlanDraft.procedures.filter(x=>x.status==='تم').length;
+      const remain = currentPlanDraft.procedures.filter(x=>x.status!=='تم' && x.status!=='ملغي').length;
+      document.getElementById('planSummary').innerHTML = `
+        <div class="fin-row"><span>إجمالي الخطة</span><b>${fmt(total)} ج.م</b></div>
+        <div class="fin-row"><span>المدفوع</span><b>${fmt(paid)} ج.م</b></div>
+        <div class="fin-row total grand"><span>المتبقي</span><b>${fmt(total-paid)} ج.م</b></div>
+        <div class="fin-row"><span>الإجراءات المنفذة</span><b>${done}</b></div>
+        <div class="fin-row"><span>الإجراءات المتبقية</span><b>${remain}</b></div>
+      `;
+    }
+    refreshSubLists();
+    refreshSummary();
+
+    document.getElementById('backToPlansListBtn').addEventListener('click', ()=>{
+      currentPlanDraft = null;
+      openPatientPlansModal(currentPlanPatientId, d.patientName);
+    });
+    document.getElementById('addPlanProcBtn').addEventListener('click', ()=>{
+      const sel = document.getElementById('planProcSelect');
+      const svc = services.find(s=>s.id===sel.value);
+      if(!svc){ toast('اختر إجراء من القائمة'); return; }
+      const qty = parseFloat(document.getElementById('planProcQty').value)||1;
+      currentPlanDraft.procedures.push({ id: genId(), name: svc.name, price: svc.price, qty, total: svc.price*qty, status:'مخطط' });
+      sel.value=''; document.getElementById('planProcQty').value=1;
+      refreshSubLists(); refreshSummary();
+    });
+    document.getElementById('addPlanMedBtn').addEventListener('click', ()=>{
+      const name = document.getElementById('planMedName').value.trim();
+      if(!name){ toast('اكتب اسم الدواء'); return; }
+      currentPlanDraft.medications.push({
+        id: genId(), name, dosage: document.getElementById('planMedDosage').value.trim(),
+        frequency: document.getElementById('planMedFreq').value.trim(), duration: document.getElementById('planMedDuration').value.trim(), notes:''
+      });
+      ['planMedName','planMedDosage','planMedFreq','planMedDuration'].forEach(id=>document.getElementById(id).value='');
+      refreshSubLists();
+    });
+    document.getElementById('addPlanSessBtn').addEventListener('click', ()=>{
+      const date = document.getElementById('planSessDate').value;
+      const proc = document.getElementById('planSessProc').value.trim();
+      if(!date || !proc){ toast('اكتب تاريخ الجلسة والإجراء'); return; }
+      currentPlanDraft.sessions.push({
+        id: genId(), date, time: document.getElementById('planSessTime').value,
+        proc, doctor: document.getElementById('planSessDoctor').value, status:'محجوزة'
+      });
+      ['planSessDate','planSessTime','planSessProc'].forEach(id=>document.getElementById(id).value='');
+      refreshSubLists();
+    });
+    document.getElementById('planPaid').addEventListener('input', refreshSummary);
+
+    document.getElementById('savePlanBtn').addEventListener('click', async ()=>{
+      currentPlanDraft.date = document.getElementById('planDate').value;
+      currentPlanDraft.doctor = document.getElementById('planDoctor').value;
+      currentPlanDraft.diagnosis = document.getElementById('planDiagnosis').value.trim();
+      currentPlanDraft.notes = document.getElementById('planNotes').value.trim();
+      currentPlanDraft.paid = parseFloat(document.getElementById('planPaid').value)||0;
+      if(currentPlanDraft.id){
+        const idx = treatmentPlans.findIndex(p=>p.id===currentPlanDraft.id);
+        if(idx>-1) treatmentPlans[idx] = currentPlanDraft;
+        logAction(`تعديل خطة علاج: ${currentPlanDraft.patientName}`);
+      } else {
+        currentPlanDraft.id = genId();
+        currentPlanDraft.createdBy = currentUser?currentUser.name:'—';
+        currentPlanDraft.createdAt = new Date().toISOString();
+        treatmentPlans.unshift(currentPlanDraft);
+        logAction(`إنشاء خطة علاج جديدة: ${currentPlanDraft.patientName}`);
+      }
+      await saveTreatmentPlans();
+      toast('تم حفظ خطة العلاج');
+      closePlanModal();
+    });
+    const delBtn = document.getElementById('deletePlanBtn');
+    if(delBtn){
+      delBtn.addEventListener('click', async ()=>{
+        if(!confirm('تأكيد حذف خطة العلاج دي نهائيًا؟')) return;
+        treatmentPlans = treatmentPlans.filter(p=>p.id!==currentPlanDraft.id);
+        await saveTreatmentPlans();
+        logAction(`حذف خطة علاج: ${currentPlanDraft.patientName}`);
+        toast('تم حذف الخطة');
+        closePlanModal();
+      });
+    }
   }
 
   // ---------- Compare chart ----------
