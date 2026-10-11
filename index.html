@@ -493,6 +493,15 @@
         <input type="text" id="fPatient" required placeholder="اكتب اسم المريض" list="patientsDatalist" autocomplete="off">
         <datalist id="patientsDatalist"></datalist>
         <div class="patient-status" id="patientStatus"></div>
+        <div id="outstandingList"></div>
+      </div>
+      <div class="field" id="continuePaymentBox" style="display:none;background:var(--teal-soft);border-radius:10px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:13px;color:var(--gold);font-weight:700;margin-bottom:8px;" id="continuePaymentInfo"></div>
+        <div class="row2">
+          <input type="number" min="0" step="0.01" id="continuePaymentAmount" placeholder="قيمة الدفعة الجديدة">
+          <button type="button" class="btn-mini" id="continuePaymentBtn">تسجيل الدفعة</button>
+        </div>
+        <div class="setup-hint" id="cancelContinuePayment" style="cursor:pointer;text-decoration:underline;margin-top:6px;">إلغاء</div>
       </div>
       <div class="row2">
         <div class="field">
@@ -1291,7 +1300,7 @@ window.__firestoreClinicId = '';
   function updatePatientStatus(){
     const name = document.getElementById('fPatient').value.trim();
     const el = document.getElementById('patientStatus');
-    if(!name){ el.className = 'patient-status'; el.textContent=''; return; }
+    if(!name){ el.className = 'patient-status'; el.textContent=''; document.getElementById('outstandingList').innerHTML=''; return; }
     const p = patients.find(p=>norm(p.name)===norm(name));
     if(p){
       const visits = entries.filter(e=>e.patientId===p.id).length;
@@ -1301,12 +1310,68 @@ window.__firestoreClinicId = '';
       if(p.medNum && !medNumInput.value.trim() && !editingId){
         medNumInput.value = p.medNum;
       }
+      showOutstandingForPatient(p);
     } else {
       el.className = 'patient-status new';
       el.textContent = '🆕 مريض جديد';
+      document.getElementById('outstandingList').innerHTML = '';
     }
   }
   document.getElementById('fPatient').addEventListener('input', updatePatientStatus);
+
+  // ---------- Continue payment on an existing unfinished receipt ----------
+  let continuingEntryId = null;
+  function showOutstandingForPatient(p){
+    const box = document.getElementById('outstandingList');
+    if(editingId){ box.innerHTML=''; return; } // مش بنقترح استكمال دفع إحنا أصلاً بنعدّل إيصال
+    const outstanding = entries.filter(e=>e.patientId===p.id && (e.value-(e.discount||0)-e.paid)>0.009);
+    if(!outstanding.length){ box.innerHTML=''; return; }
+    box.innerHTML = `<div class="stat-sub" style="margin:4px 0 6px;">عنده إجراءات متبقي منها مبلغ — تقدر تكمل تسجيل دفعة عليها بدل إجراء جديد:</div>` +
+      outstanding.map(e=>{
+        const rem = e.value-(e.discount||0)-e.paid;
+        return `<div class="record" style="margin-bottom:6px;padding:10px 12px;">
+          <div class="record-proc">${escapeHtml(e.proc)} — متبقي <b>${fmt(rem)}</b> ج.م (${escapeHtml(e.date)})</div>
+          <button type="button" class="btn-mini gold continue-payment-btn" data-id="${e.id}" style="margin-top:6px;">➕ تسجيل دفعة على ده</button>
+        </div>`;
+      }).join('');
+    box.querySelectorAll('.continue-payment-btn').forEach(b=>{
+      b.addEventListener('click', ()=> startContinuePayment(b.dataset.id));
+    });
+  }
+  function startContinuePayment(entryId){
+    const e = entries.find(x=>x.id===entryId);
+    if(!e) return;
+    continuingEntryId = entryId;
+    const rem = e.value-(e.discount||0)-e.paid;
+    document.getElementById('continuePaymentInfo').textContent = `بتكمل دفع على: ${e.proc} — المتبقي حاليًا: ${fmt(rem)} ج.م`;
+    document.getElementById('continuePaymentBox').style.display = 'block';
+    document.getElementById('continuePaymentAmount').value = '';
+    document.getElementById('continuePaymentAmount').focus();
+  }
+  document.getElementById('cancelContinuePayment').addEventListener('click', ()=>{
+    continuingEntryId = null;
+    document.getElementById('continuePaymentBox').style.display = 'none';
+  });
+  document.getElementById('continuePaymentBtn').addEventListener('click', async ()=>{
+    if(!continuingEntryId) return;
+    const amount = parseFloat(document.getElementById('continuePaymentAmount').value);
+    if(!amount || amount<=0){ toast('اكتب قيمة الدفعة'); return; }
+    const idx = entries.findIndex(x=>x.id===continuingEntryId);
+    if(idx===-1){ toast('الإيصال مش موجود، جرّب تاني'); continuingEntryId=null; document.getElementById('continuePaymentBox').style.display='none'; return; }
+    entries[idx].paid += amount;
+    await saveEntries();
+    logAction(`دفعة إضافية على إيصال: ${entries[idx].patient} · ${entries[idx].proc} · +${fmt(amount)} ج.م`);
+    toast('تم تسجيل الدفعة');
+    const who = currentUser ? currentUser.name : '—';
+    notifyManagers(`${who} سجّل دفعة إضافية ${fmt(amount)} ج.م على إيصال ${entries[idx].patient} · ${entries[idx].proc}`);
+    continuingEntryId = null;
+    document.getElementById('continuePaymentBox').style.display = 'none';
+    document.getElementById('continuePaymentAmount').value = '';
+    renderRecords();
+    renderDashboard();
+    renderPatients();
+    updatePatientStatus();
+  });
 
   // ---------- Services datalist + autofill ----------
   function rebuildServicesDatalist(){
@@ -1817,7 +1882,8 @@ window.__firestoreClinicId = '';
       (!toVal || e.date<=toVal) &&
       (!q || norm(e.patient).includes(q) || norm(e.doctor).includes(q) || norm(e.receipt).includes(q) || norm(e.medNum).includes(q))
     ).sort((a,b)=> a.date===b.date ? 0 : (a.date<b.date?1:-1));
-    document.getElementById('entriesCount').textContent = entries.length + ' إيصال' + (list.length!==entries.length ? ` (معروض: ${list.length})` : '');
+    const listPaidTotal = list.reduce((s,e)=>s+e.paid,0);
+    document.getElementById('entriesCount').textContent = `${list.length} إيصال معروض · إجمالي المدفوع ${fmt(listPaidTotal)} ج.م` + (list.length!==entries.length ? ` (من أصل ${entries.length})` : '');
     const box = document.getElementById('recordsList');
     box.innerHTML = '';
     if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد عمليات مطابقة</div>'; return; }
