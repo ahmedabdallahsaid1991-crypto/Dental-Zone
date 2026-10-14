@@ -1321,55 +1321,79 @@ window.__firestoreClinicId = '';
 
   // ---------- Continue payment on an existing unfinished receipt ----------
   let continuingEntryId = null;
+  function groupKeyOf(e){ return e.groupId || e.id; }
   function showOutstandingForPatient(p){
     const box = document.getElementById('outstandingList');
     if(editingId){ box.innerHTML=''; return; } // مش بنقترح استكمال دفع إحنا أصلاً بنعدّل إيصال
-    const outstanding = entries.filter(e=>e.patientId===p.id && (e.value-(e.discount||0)-e.paid)>0.009);
-    if(!outstanding.length){ box.innerHTML=''; return; }
+    const mine = entries.filter(e=>e.patientId===p.id);
+    const groups = {};
+    mine.forEach(e=>{
+      const k = groupKeyOf(e);
+      if(!groups[k]) groups[k] = { key:k, members:[], root:null };
+      groups[k].members.push(e);
+      if(!e.groupId) groups[k].root = e; // صاحب الإجراء الأصلي (اللي مالوش groupId)
+    });
+    const outstandingGroups = Object.values(groups).map(g=>{
+      const remaining = g.members.reduce((s,e)=>s+(e.value-(e.discount||0)-e.paid),0);
+      const root = g.root || g.members[0];
+      return { key:g.key, remaining, root };
+    }).filter(g=>g.remaining>0.009);
+    if(!outstandingGroups.length){ box.innerHTML=''; return; }
     box.innerHTML = `<div class="stat-sub" style="margin:4px 0 6px;">عنده إجراءات متبقي منها مبلغ — تقدر تكمل تسجيل دفعة عليها بدل إجراء جديد:</div>` +
-      outstanding.map(e=>{
-        const rem = e.value-(e.discount||0)-e.paid;
-        return `<div class="record" style="margin-bottom:6px;padding:10px 12px;">
-          <div class="record-proc">${escapeHtml(e.proc)} — متبقي <b>${fmt(rem)}</b> ج.م (${escapeHtml(e.date)})</div>
-          <button type="button" class="btn-mini gold continue-payment-btn" data-id="${e.id}" style="margin-top:6px;">➕ تسجيل دفعة على ده</button>
-        </div>`;
-      }).join('');
+      outstandingGroups.map(g=>`
+        <div class="record" style="margin-bottom:6px;padding:10px 12px;">
+          <div class="record-proc">${escapeHtml(g.root.proc)} — متبقي <b>${fmt(g.remaining)}</b> ج.م (${escapeHtml(g.root.date)})</div>
+          <button type="button" class="btn-mini gold continue-payment-btn" data-key="${g.key}" style="margin-top:6px;">➕ تسجيل دفعة على ده</button>
+        </div>`).join('');
     box.querySelectorAll('.continue-payment-btn').forEach(b=>{
-      b.addEventListener('click', ()=> startContinuePayment(b.dataset.id));
+      b.addEventListener('click', ()=> startContinuePayment(b.dataset.key));
     });
   }
-  function startContinuePayment(entryId){
-    const e = entries.find(x=>x.id===entryId);
-    if(!e) return;
-    continuingEntryId = entryId;
-    const rem = e.value-(e.discount||0)-e.paid;
-    document.getElementById('continuePaymentInfo').textContent = `بتكمل دفع على: ${e.proc} — المتبقي حاليًا: ${fmt(rem)} ج.م`;
+  let continuingGroupKey = null, continuingRootEntry = null;
+  function startContinuePayment(groupKey){
+    const members = entries.filter(e=>groupKeyOf(e)===groupKey);
+    if(!members.length) return;
+    const root = members.find(e=>!e.groupId) || members[0];
+    const remaining = members.reduce((s,e)=>s+(e.value-(e.discount||0)-e.paid),0);
+    continuingGroupKey = groupKey;
+    continuingRootEntry = root;
+    document.getElementById('continuePaymentInfo').textContent = `بتكمل دفع على: ${root.proc} — المتبقي حاليًا: ${fmt(remaining)} ج.م`;
     document.getElementById('continuePaymentBox').style.display = 'block';
     document.getElementById('continuePaymentAmount').value = '';
     document.getElementById('continuePaymentAmount').focus();
   }
   document.getElementById('cancelContinuePayment').addEventListener('click', ()=>{
-    continuingEntryId = null;
+    continuingGroupKey = null; continuingRootEntry = null;
     document.getElementById('continuePaymentBox').style.display = 'none';
   });
   document.getElementById('continuePaymentBtn').addEventListener('click', async ()=>{
-    if(!continuingEntryId) return;
+    if(!continuingGroupKey || !continuingRootEntry) return;
     const amount = parseFloat(document.getElementById('continuePaymentAmount').value);
     if(!amount || amount<=0){ toast('اكتب قيمة الدفعة'); return; }
-    const idx = entries.findIndex(x=>x.id===continuingEntryId);
-    if(idx===-1){ toast('الإيصال مش موجود، جرّب تاني'); continuingEntryId=null; document.getElementById('continuePaymentBox').style.display='none'; return; }
-    entries[idx].paid += amount;
+    const root = continuingRootEntry;
+    const today = new Date().toISOString().slice(0,10);
+    // بيتعمل إيصال جديد بتاريخ النهاردة (عشان يتحسب كدخل في الفترة اللي اتدفع فيها فعليًا)
+    // بقيمة صفر (مفيش إجراء جديد)، مربوط بالإجراء الأصلي عن طريق groupId، فالمتبقي الإجمالي بيتظبط صح.
+    entries.unshift({
+      id: genId(), groupId: continuingGroupKey,
+      date: today, patient: root.patient, patientId: root.patientId, medNum: root.medNum,
+      receipt: '', doctor: root.doctor, type: root.type,
+      proc: 'دفعة إضافية — ' + root.proc, value: 0, discount: 0, paid: amount
+    });
     await saveEntries();
-    logAction(`دفعة إضافية على إيصال: ${entries[idx].patient} · ${entries[idx].proc} · +${fmt(amount)} ج.م`);
-    toast('تم تسجيل الدفعة');
+    logAction(`دفعة إضافية على إيصال: ${root.patient} · ${root.proc} · +${fmt(amount)} ج.م بتاريخ ${today}`);
+    toast('تم تسجيل الدفعة بتاريخ النهاردة');
     const who = currentUser ? currentUser.name : '—';
-    notifyManagers(`${who} سجّل دفعة إضافية ${fmt(amount)} ج.م على إيصال ${entries[idx].patient} · ${entries[idx].proc}`);
-    continuingEntryId = null;
+    notifyManagers(`${who} سجّل دفعة إضافية ${fmt(amount)} ج.م على إجراء ${root.patient} · ${root.proc} بتاريخ ${today}`);
+    continuingGroupKey = null; continuingRootEntry = null;
     document.getElementById('continuePaymentBox').style.display = 'none';
     document.getElementById('continuePaymentAmount').value = '';
+    rebuildPatientDatalist();
+    renderPeriodSelect(); renderFilterPeriodSelect();
     renderRecords();
     renderDashboard();
     renderPatients();
+    renderCompareRangeOptions(); renderCompareChart();
     updatePatientStatus();
   });
 
@@ -1840,6 +1864,7 @@ window.__firestoreClinicId = '';
 
   // ---------- Records ----------
   function buildRecordCard(e){
+    const isContinuation = e.groupId && e.value===0;
     const remaining = e.value - (e.discount||0) - e.paid;
     const div = document.createElement('div');
     div.className = 'record';
@@ -1849,14 +1874,16 @@ window.__firestoreClinicId = '';
           <div class="record-name">${escapeHtml(e.patient||'—')}</div>
           <div class="record-date">${escapeHtml(e.date||'')}${e.medNum?' · رقم طبي '+escapeHtml(e.medNum):''}${e.receipt?' · ايصال '+escapeHtml(e.receipt):''}</div>
         </div>
-        <div class="record-badge badge-${e.type}">${e.type}</div>
+        <div class="record-badge badge-${e.type}">${isContinuation ? 'دفعة' : e.type}</div>
       </div>
       <div class="record-proc">${escapeHtml(e.proc||'')}</div>
       <div class="record-nums">
-        <span>القيمة <b>${fmt(e.value)}</b></span>
-        ${e.discount ? `<span>الخصم <b>${fmt(e.discount)}</b></span>` : ''}
-        <span>المدفوع <b>${fmt(e.paid)}</b></span>
-        <span>المتبقي <b>${fmt(remaining)}</b></span>
+        ${isContinuation ? `<span>المبلغ المحصّل <b>${fmt(e.paid)}</b></span>` : `
+          <span>القيمة <b>${fmt(e.value)}</b></span>
+          ${e.discount ? `<span>الخصم <b>${fmt(e.discount)}</b></span>` : ''}
+          <span>المدفوع <b>${fmt(e.paid)}</b></span>
+          <span>المتبقي <b>${fmt(remaining)}</b></span>
+        `}
       </div>
       <div class="record-foot">
         <div class="record-doc">${escapeHtml(e.doctor||'')}</div>
