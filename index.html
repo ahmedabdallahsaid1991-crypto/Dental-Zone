@@ -535,11 +535,17 @@
       </div>
       <div id="cartList"></div>
       <button type="button" class="btn-mini" id="addCartItemBtn" style="width:100%;margin-bottom:13px;">➕ ضيف بند تاني لنفس الإيصال</button>
-      <div class="row3">
+      <div class="row2">
         <div class="field">
-          <label>القيمة (ج.م)</label>
+          <label>العدد</label>
+          <input type="number" step="1" min="1" id="fQty" value="1">
+        </div>
+        <div class="field">
+          <label>القيمة للوحدة (ج.م)</label>
           <input type="number" step="0.01" min="0" id="fValue" required placeholder="٠">
         </div>
+      </div>
+      <div class="row2">
         <div class="field">
           <label>الخصم (ج.م)</label>
           <input type="number" step="0.01" min="0" id="fDiscount" placeholder="٠">
@@ -548,6 +554,10 @@
           <label>المدفوع (ج.م)</label>
           <input type="number" step="0.01" min="0" id="fPaid" required placeholder="٠">
         </div>
+      </div>
+      <div class="calc-strip">
+        <span class="k">الإجمالي (العدد × القيمة)</span>
+        <span class="v" id="unitTotalDisplay">٠ ج.م</span>
       </div>
       <div class="calc-strip">
         <span class="k">المتبقي</span>
@@ -1251,6 +1261,8 @@ window.__firestoreClinicId = '';
   function buildPeriodOptionsHtml(){
     const keys = new Set([currentPeriodKey()]);
     entries.forEach(e=>keys.add(periodKeyForDate(e.date)));
+    labsData.work.forEach(w=>{ if(w.date) keys.add(periodKeyForDate(w.date)); });
+    expenses.forEach(x=>{ if(x.date) keys.add(periodKeyForDate(x.date)); });
     const sorted = Array.from(keys).sort().reverse();
     const years = Array.from(new Set(sorted.map(k=>k.split('-')[0]))).sort().reverse();
     const yearOptions = years.map(y=>`<option value="year:${y}">📅 السنة المحاسبية ${y}</option>`).join('');
@@ -1358,6 +1370,7 @@ window.__firestoreClinicId = '';
     document.getElementById('fType').value = root.type;
     document.getElementById('fProc').value = 'دفعة إضافية — ' + root.proc;
     fValue.value = 0;
+    document.getElementById('fQty').value = 1;
     fDiscount.value = '';
     fPaid.value = '';
     document.getElementById('fReceipt').value = '';
@@ -1423,25 +1436,33 @@ window.__firestoreClinicId = '';
   }
   document.getElementById('addCartItemBtn').addEventListener('click', ()=>{
     const name = document.getElementById('fProc').value.trim();
-    const value = parseFloat(fValue.value)||0;
+    const value = currentUnitTotal();
     if(!name || !value){ toast('اكتب اسم البند وقيمته الأول'); return; }
     cartItems.push({ name, value });
     document.getElementById('fProc').value = '';
     fValue.value = '';
+    document.getElementById('fQty').value = 1;
     updateRemaining();
     renderCartList();
     document.getElementById('fProc').focus();
     toast('تمت إضافة البند — اكتب البند التالي');
   });
+  function currentUnitTotal(){
+    const qty = parseFloat(document.getElementById('fQty').value)||1;
+    return (parseFloat(fValue.value)||0) * qty;
+  }
   function updateRemaining(){
+    const unitTotal = currentUnitTotal();
     const cartTotal = cartItems.reduce((s,i)=>s+i.value,0);
-    const v = (parseFloat(fValue.value)||0) + cartTotal, disc = parseFloat(fDiscount.value)||0, p = parseFloat(fPaid.value)||0;
+    const v = unitTotal + cartTotal, disc = parseFloat(fDiscount.value)||0, p = parseFloat(fPaid.value)||0;
     const r = v - disc - p;
+    document.getElementById('unitTotalDisplay').textContent = fmt(unitTotal) + ' ج.م';
     const el = document.getElementById('remainingDisplay');
     el.textContent = fmt(r) + ' ج.م';
     el.classList.toggle('owing', r>0);
   }
   fValue.addEventListener('input', updateRemaining);
+  document.getElementById('fQty').addEventListener('input', updateRemaining);
   fDiscount.addEventListener('input', updateRemaining);
   fPaid.addEventListener('input', updateRemaining);
   document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
@@ -1493,7 +1514,7 @@ window.__firestoreClinicId = '';
     if(!checkReceiptDuplicate()){ toast('رقم الايصال مكرر، عدّله'); return; }
 
     const currentName = document.getElementById('fProc').value.trim();
-    const currentValue = parseFloat(fValue.value)||0;
+    const currentValue = currentUnitTotal();
     let finalProc, finalValue;
     if(cartItems.length){
       const allItems = currentName ? [...cartItems, { name: currentName, value: currentValue }] : cartItems;
@@ -1564,6 +1585,7 @@ window.__firestoreClinicId = '';
     renderCartList();
     continuingGroupKey = null;
     document.getElementById('continuePaymentBanner').style.display = 'none';
+    document.getElementById('fQty').value = 1;
     document.getElementById('fPatient').value = en.patient;
     document.getElementById('fMedNum').value = en.medNum||'';
     document.getElementById('fReceipt').value = en.receipt||'';
@@ -1649,17 +1671,26 @@ window.__firestoreClinicId = '';
     window.print();
   }
 
-  function printLabInvoice(labId){
+  function printLabInvoice(labId, periodKey){
+    periodKey = periodKey || 'all';
     const lab = labsData.labs.find(l=>l.id===labId);
     if(!lab) return;
-    const work = labsData.work.filter(w=>w.labId===labId).sort((a,b)=>a.date<b.date?1:-1);
+    const inPeriod = w => {
+      if(periodKey==='all') return true;
+      if(periodKey.startsWith('year:')) return periodKeyForDate(w.date).startsWith(periodKey.slice(5)+'-');
+      return periodKeyForDate(w.date)===periodKey;
+    };
+    const work = labsData.work.filter(w=>w.labId===labId && inPeriod(w)).sort((a,b)=>a.date<b.date?1:-1);
     const total = work.reduce((s,w)=>s+w.total,0);
+    const periodText = periodKey==='all' ? 'كل الفترات' : periodLabel(periodKey);
     const rows = work.map(w=>`
       <div class="receipt-row"><span>${escapeHtml(w.date)} — ${escapeHtml(w.itemName)}${w.patient?(' ('+escapeHtml(w.patient)+')'):''}</span><b>${w.qty} × ${fmt(w.unitPrice)} = ${fmt(w.total)}</b></div>
     `).join('');
     document.getElementById('printReceiptContent').innerHTML = `
       ${printHeaderHtml('فاتورة معمل: ' + lab.name)}
-      ${rows || '<div class="receipt-row"><span>لا يوجد شغل مسجل</span></div>'}
+      <div class="receipt-row"><span>الفترة</span><b>${escapeHtml(periodText)}</b></div>
+      <div class="receipt-divider"></div>
+      ${rows || '<div class="receipt-row"><span>لا يوجد شغل مسجل في هذه الفترة</span></div>'}
       <div class="receipt-divider"></div>
       <div class="receipt-row total"><span>الإجمالي المستحق للمعمل</span><b>${fmt(total)} ج.م</b></div>
       ${printFooterHtml('تاريخ الطباعة: ' + new Date().toISOString().slice(0,10))}
@@ -2400,7 +2431,10 @@ window.__firestoreClinicId = '';
             </tbody>
             <tfoot><tr><td colspan="6">الإجمالي</td><td colspan="2">${fmt(total)}</td></tr></tfoot>
           </table>
-          <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}" style="width:100%;margin-top:8px;">🖨 طباعة فاتورة المعمل</button>
+          <div class="row2" style="margin-top:8px;">
+            <select class="lab-invoice-period" data-lid="${lab.id}"><option value="all">كل الفترات</option>${buildPeriodOptionsHtml()}</select>
+            <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}">🖨 طباعة فاتورة المعمل</button>
+          </div>
 
           <h3 class="sub-title">مرفقات (فواتير / قوائم أسعار)</h3>
           <div class="stat-sub" style="margin-bottom:4px;">ارفع صورة أو PDF لفاتورة المعمل أو قائمة أسعاره عشان تكون محفوظة عندك (حد أقصى تقريبًا 1.5 ميجا للملف)</div>
@@ -2571,7 +2605,11 @@ window.__firestoreClinicId = '';
       btn.addEventListener('click', ()=> resetLabWorkForm(btn.dataset.lid));
     });
     box.querySelectorAll('.print-lab-invoice').forEach(btn=>{
-      btn.addEventListener('click', ()=>{ printLabInvoice(btn.dataset.lid); });
+      btn.addEventListener('click', ()=>{
+        const lid = btn.dataset.lid;
+        const sel = box.querySelector(`.lab-invoice-period[data-lid="${lid}"]`);
+        printLabInvoice(lid, sel ? sel.value : 'all');
+      });
     });
     box.querySelectorAll('.lab-work-del').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
