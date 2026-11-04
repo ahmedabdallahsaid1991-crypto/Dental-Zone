@@ -1671,8 +1671,9 @@ window.__firestoreClinicId = '';
     window.print();
   }
 
-  function printLabInvoice(labId, periodKey){
+  function printLabInvoice(labId, periodKey, doctorFilter){
     periodKey = periodKey || 'all';
+    doctorFilter = doctorFilter || '__all__';
     const lab = labsData.labs.find(l=>l.id===labId);
     if(!lab) return;
     const inPeriod = w => {
@@ -1680,15 +1681,18 @@ window.__firestoreClinicId = '';
       if(periodKey.startsWith('year:')) return periodKeyForDate(w.date).startsWith(periodKey.slice(5)+'-');
       return periodKeyForDate(w.date)===periodKey;
     };
-    const work = labsData.work.filter(w=>w.labId===labId && inPeriod(w)).sort((a,b)=>a.date<b.date?1:-1);
+    const matchesDoctor = w => doctorFilter==='__all__' ? true : (doctorFilter==='__none__' ? !w.doctor : w.doctor===doctorFilter);
+    const work = labsData.work.filter(w=>w.labId===labId && inPeriod(w) && matchesDoctor(w)).sort((a,b)=>a.date<b.date?1:-1);
+    const doctorText = doctorFilter==='__all__' ? 'كل الأطباء' : (doctorFilter==='__none__' ? 'بدون طبيب محدد' : doctorFilter);
     const total = work.reduce((s,w)=>s+w.total,0);
     const periodText = periodKey==='all' ? 'كل الفترات' : periodLabel(periodKey);
     const rows = work.map(w=>`
-      <div class="receipt-row"><span>${escapeHtml(w.date)} — ${escapeHtml(w.itemName)}${w.patient?(' ('+escapeHtml(w.patient)+')'):''}</span><b>${w.qty} × ${fmt(w.unitPrice)} = ${fmt(w.total)}</b></div>
+      <div class="receipt-row"><span>${escapeHtml(w.date)} — ${escapeHtml(w.itemName)}${w.patient?(' ('+escapeHtml(w.patient)+')'):''}${(doctorFilter==='__all__' && w.doctor)?(' — د. '+escapeHtml(w.doctor)):''}</span><b>${w.qty} × ${fmt(w.unitPrice)} = ${fmt(w.total)}</b></div>
     `).join('');
     document.getElementById('printReceiptContent').innerHTML = `
       ${printHeaderHtml('فاتورة معمل: ' + lab.name)}
       <div class="receipt-row"><span>الفترة</span><b>${escapeHtml(periodText)}</b></div>
+      <div class="receipt-row"><span>الطبيب</span><b>${escapeHtml(doctorText)}</b></div>
       <div class="receipt-divider"></div>
       ${rows || '<div class="receipt-row"><span>لا يوجد شغل مسجل في هذه الفترة</span></div>'}
       <div class="receipt-divider"></div>
@@ -2433,8 +2437,13 @@ window.__firestoreClinicId = '';
           </table>
           <div class="row2" style="margin-top:8px;">
             <select class="lab-invoice-period" data-lid="${lab.id}"><option value="all">كل الفترات</option>${buildPeriodOptionsHtml()}</select>
-            <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}">🖨 طباعة فاتورة المعمل</button>
+            <select class="lab-invoice-doctor" data-lid="${lab.id}">
+              <option value="__all__">كل الأطباء</option>
+              ${doctorNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+              <option value="__none__">بدون طبيب محدد</option>
+            </select>
           </div>
+          <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}" style="width:100%;margin-top:8px;">🖨 طباعة فاتورة المعمل</button>
 
           <h3 class="sub-title">مرفقات (فواتير / قوائم أسعار)</h3>
           <div class="stat-sub" style="margin-bottom:4px;">ارفع صورة أو PDF لفاتورة المعمل أو قائمة أسعاره عشان تكون محفوظة عندك (حد أقصى تقريبًا 1.5 ميجا للملف)</div>
@@ -2608,7 +2617,8 @@ window.__firestoreClinicId = '';
       btn.addEventListener('click', ()=>{
         const lid = btn.dataset.lid;
         const sel = box.querySelector(`.lab-invoice-period[data-lid="${lid}"]`);
-        printLabInvoice(lid, sel ? sel.value : 'all');
+        const docSel = box.querySelector(`.lab-invoice-doctor[data-lid="${lid}"]`);
+        printLabInvoice(lid, sel ? sel.value : 'all', docSel ? docSel.value : '__all__');
       });
     });
     box.querySelectorAll('.lab-work-del').forEach(btn=>{
