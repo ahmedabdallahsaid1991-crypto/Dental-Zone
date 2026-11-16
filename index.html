@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<meta name="app-build" content="20261115-1626">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#070707">
@@ -212,8 +213,8 @@
   .inv-del-btn{color:var(--rose);}
 
   /* Treatment plan modal */
-  #planModal{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center;}
-  #planModal.open{display:flex;}
+  #planModal, #labImportModal{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center;}
+  #planModal.open, #labImportModal.open{display:flex;}
   .plan-modal-box{background:var(--paper);width:100%;max-width:640px;max-height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;}
   .plan-modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:var(--card);border-bottom:1px solid var(--line);font-weight:900;color:var(--gold);font-size:15px;}
   .plan-modal-head button{border:none;background:none;color:var(--ink-soft);font-size:18px;cursor:pointer;}
@@ -226,6 +227,11 @@
   .plan-sub-item{display:flex;justify-content:space-between;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px;}
   .plan-sub-item .psi-main{flex:1;}
   .plan-sub-item .psi-del{border:none;background:none;color:var(--rose);cursor:pointer;font-size:13px;margin-right:8px;}
+  .tooth-grid{display:grid;direction:ltr;gap:2px;margin:4px 0;}
+  .tooth-btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px 6px 10px 10px;min-height:34px;font-size:9.5px;font-weight:700;cursor:pointer;padding:0;font-family:inherit;}
+  .tooth-btn.sel{background:var(--gold);color:#000;border-color:var(--gold);}
+  .tooth-btn.has-work{border-color:#2ea05a;box-shadow:inset 0 -3px 0 #2ea05a;}
+  .jaw-label{font-size:10.5px;color:var(--ink-soft);text-align:center;margin-top:6px;}
   .status-select{font-size:11px;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;}
 
   /* Compare */
@@ -309,6 +315,8 @@
   .notif-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:13px;}
   .notif-item.unread{border-color:var(--gold);background:var(--gold-soft);}
   .notif-item .n-top{display:flex;justify-content:space-between;color:var(--ink-soft);font-size:11px;margin-bottom:4px;}
+  #updateBanner{position:fixed;left:12px;right:12px;bottom:14px;z-index:1200;background:var(--gold);color:#000;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.45);}
+  #updateBanner button{border:none;background:#000;color:var(--gold);border-radius:8px;padding:8px 14px;font-family:inherit;font-weight:700;cursor:pointer;}
   #pendingBanner{background:var(--rose-soft);color:var(--rose);font-size:12.5px;text-align:center;padding:10px 16px;line-height:1.7;}
   .approval-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;}
   .approval-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:4px;}
@@ -432,6 +440,7 @@
     <button class="tab-btn" data-view="import">استيراد</button>
     <button class="tab-btn" data-view="users">المستخدمون</button>
     <button class="tab-btn" data-view="audit">سجل النشاط</button>
+    <button class="tab-btn" data-view="labportal">أعمال معملي</button>
     <button class="tab-btn" data-view="approvals">الموافقات <span id="approvalsBadge" class="notif-badge" style="display:none;position:static;margin-right:2px;"></span></button>
   </div>
 
@@ -493,6 +502,7 @@
         <input type="text" id="fPatient" required placeholder="اكتب اسم المريض" list="patientsDatalist" autocomplete="off">
         <datalist id="patientsDatalist"></datalist>
         <div class="patient-status" id="patientStatus"></div>
+        <div id="similarList"></div>
         <div id="outstandingList"></div>
       </div>
       <div class="edit-banner" id="continuePaymentBanner">
@@ -502,7 +512,9 @@
       <div class="row2">
         <div class="field">
           <label>الرقم الطبي الموحد</label>
-          <input type="text" id="fMedNum" placeholder="مثال: 7556">
+          <input type="text" id="fMedNum" placeholder="مثال: 7556" list="medNumsDatalist" autocomplete="off">
+          <datalist id="medNumsDatalist"></datalist>
+          <div class="patient-status" id="medNumStatus"></div>
         </div>
         <div class="field">
           <label>رقم الايصال</label>
@@ -635,8 +647,10 @@
   <div class="view" id="view-patients">
     <h2 class="section-title">قاعدة بيانات المرضى <span class="count-badge" id="patientsCount"></span></h2>
     <div class="search-row">
-      <input type="text" id="patientSearch" placeholder="ابحث باسم المريض">
+      <input type="text" id="patientSearch" placeholder="ابحث باسم المريض أو الرقم الطبي">
     </div>
+    <button class="btn-mini gold" id="scanDupBtn" style="width:100%;margin-bottom:10px;display:none;">🔍 كشف الأسماء المتشابهة / دمج المرضى</button>
+    <div id="dupPanel"></div>
     <label class="debt-toggle">
       <input type="checkbox" id="debtOnlyToggle">
       إظهار أصحاب المديونيات فقط (اللي عندهم متبقي)
@@ -712,6 +726,9 @@
   <!-- INVENTORY -->
   <div class="view" id="view-inventory">
     <h2 class="section-title">المخزن <span class="count-badge" id="inventoryCount"></span></h2>
+    <datalist id="invItemsList"></datalist>
+    <datalist id="invUnitsList"></datalist>
+    <datalist id="invCatList"></datalist>
     <div class="stat-grid" style="margin-bottom:14px;">
       <div class="stat-card">
         <div class="stat-label">قيمة المخزون الإجمالية</div>
@@ -722,6 +739,23 @@
         <div class="stat-value" id="inventoryLowCount">٠</div>
       </div>
     </div>
+
+    <div class="import-step">
+      <h3>تسجيل حركة (وارد / منصرف)</h3>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="mvItem" list="invItemsList" autocomplete="off" placeholder="ابحث بالاسم أو الكود واختار من القائمة"></div>
+      <div class="stat-sub" id="mvItemInfo" style="margin-bottom:6px;"></div>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><select id="mvType"><option value="in">وارد</option><option value="out">منصرف</option></select></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" min="0" step="0.01" id="mvQty" placeholder="الكمية"></div>
+        <div class="field" style="margin-bottom:8px;"><select id="mvUnit"><option value="base">الوحدة</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="date" id="mvDate"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="mvNote" placeholder="ملاحظة (اختياري)"></div>
+      </div>
+      <button class="btn-mini" id="mvAddBtn" style="width:100%;">تسجيل الحركة</button>
+    </div>
+
     <div class="import-step">
       <h3 id="invFormTitle">إضافة صنف جديد</h3>
       <div class="edit-banner" id="invEditBanner">
@@ -732,26 +766,66 @@
         <div class="field" style="margin-bottom:8px;"><input type="text" id="invName" placeholder="اسم الصنف"></div>
         <div class="field" style="margin-bottom:8px;"><input type="text" id="invCode" placeholder="الكود (اختياري)"></div>
       </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invCategory" list="invCatList" placeholder="التصنيف"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invQty" placeholder="الكمية الافتتاحية"></div>
+      </div>
       <div class="row3">
-        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invQty" placeholder="الكمية الحالية"></div>
-        <div class="field" style="margin-bottom:8px;"><input type="text" id="invUnit" placeholder="الوحدة (علبة/قطعة..)"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invUnit" list="invUnitsList" placeholder="وحدة الصرف"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invPurchaseUnit" list="invUnitsList" placeholder="وحدة الشراء"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invFactor" placeholder="كام وحدة صرف في وحدة الشراء"></div>
+      </div>
+      <div class="row3">
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invUnitPrice" placeholder="سعر الشراء (لوحدة الصرف)"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invSalePrice" placeholder="سعر البيع"></div>
         <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invMinQty" placeholder="الحد الأدنى"></div>
       </div>
       <div class="row2">
         <div class="field" style="margin-bottom:8px;"><input type="text" id="invSupplier" placeholder="اسم الشركة/المورد"></div>
-        <div class="field" style="margin-bottom:8px;"><input type="number" step="0.01" min="0" id="invUnitPrice" placeholder="سعر الوحدة"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="invNotes" placeholder="ملاحظات (اختياري)"></div>
       </div>
-      <div class="field" style="margin-bottom:8px;"><input type="text" id="invNotes" placeholder="ملاحظات (اختياري)"></div>
       <button class="btn-mini" id="addInvBtn" style="width:100%;">حفظ الصنف</button>
     </div>
-    <div class="search-row">
-      <input type="text" id="invSearch" placeholder="ابحث باسم الصنف أو الكود أو المورد">
+
+    <details class="import-step" id="invImportBox">
+      <summary style="cursor:pointer;font-weight:700;color:var(--gold);">📥 استيراد أصناف من Excel</summary>
+      <div class="field" style="margin:10px 0 8px;"><input type="file" id="invImportFile" accept=".xlsx,.xls,.csv"></div>
+      <div id="invImportMap" style="display:none;">
+        <div class="stat-sub" style="margin-bottom:6px;">اربط أعمدة الملف بحقول النظام (الاسم مطلوب):</div>
+        <div id="invImportMapFields"></div>
+        <div class="field" style="margin:8px 0;">
+          <select id="invImportMode">
+            <option value="update">لو الصنف موجود: حدّثه</option>
+            <option value="skip">لو الصنف موجود: اتخطّاه</option>
+          </select>
+        </div>
+        <button class="btn-mini" id="invPreviewBtn" style="width:100%;">معاينة الاستيراد</button>
+      </div>
+      <div id="invImportPreview"></div>
+    </details>
+
+    <div class="row2">
+      <div class="field" style="margin-bottom:8px;"><select id="invFilterCat"><option value="">كل التصنيفات</option></select></div>
+      <div class="field" style="margin-bottom:8px;"><input type="text" id="invSearch" placeholder="ابحث باسم الصنف أو الكود أو المورد"></div>
     </div>
-    <button class="btn-mini gold" id="printInventoryBtn" style="width:100%;margin-bottom:12px;">🖨 طباعة تقرير المخزون</button>
+    <div class="row2" style="margin-bottom:12px;">
+      <button class="btn-mini" id="exportInventoryBtn">📤 تصدير Excel</button>
+      <button class="btn-mini gold" id="printInventoryBtn">🖨 طباعة تقرير</button>
+    </div>
+    <div class="stat-sub" style="margin-bottom:8px;">علّم على الأصناف اللي عايز تصدّرها أو تطبعها (لو مفيش تعليم، هتخرج كل الأصناف المعروضة).</div>
     <div id="inventoryList"></div>
+
+    <h3 class="sub-title">حركة المخزن</h3>
+    <div class="row2">
+      <div class="field" style="margin-bottom:8px;"><select id="invMoveType"><option value="">كل الحركات</option><option value="in">وارد</option><option value="out">منصرف</option></select></div>
+      <div class="field" style="margin-bottom:8px;"><select id="invMovePeriod"><option value="all">كل الفترات</option></select></div>
+    </div>
+    <div class="stat-sub" id="invMoveSummary" style="margin-bottom:8px;"></div>
+    <div id="inventoryMovesList"></div>
   </div>
 
-  <!-- COMPARE -->
+  
+<!-- COMPARE -->
   <div class="view" id="view-compare">
     <h2 class="section-title">مقارنة الدخل بين الفترات</h2>
     <div class="filter-row">
@@ -822,6 +896,7 @@
       <input type="file" id="restoreFile" accept=".json">
       <div class="stat-sub" style="margin-top:6px;">استعادة نسخة هتستبدل كل البيانات الحالية لهذه العيادة</div>
     </div>
+    <div class="stat-sub" id="securityStatus" style="display:none;margin-bottom:12px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;"></div>
     <div class="stat-sub" style="margin-bottom:12px;">حدد لكل شخص دور (مدير / طبيب / استقبال). لو حددت دور "طبيب" اربطه باسمه في قائمة الأطباء عشان يشوف بياناته بس.</div>
     <div class="import-step">
       <h3>إضافة مستخدم جديد</h3>
@@ -835,12 +910,16 @@
             <option value="reception">استقبال</option>
             <option value="purchasing">مدير مشتريات</option>
             <option value="inventory">أمين مخزن</option>
+            <option value="lab">حساب معمل</option>
           </select>
         </div>
         <div class="field" style="margin-bottom:8px;"><input type="password" id="newUserPassword" placeholder="كلمة مرور (٦ أحرف على الأقل)"></div>
       </div>
       <div class="field" id="newUserLinkWrap" style="display:none;margin-bottom:8px;">
         <select id="newUserLinkDoctor"><option value="">اربط باسم طبيب (اختياري)</option></select>
+      </div>
+      <div class="field" id="newUserLabWrap" style="display:none;margin-bottom:8px;">
+        <select id="newUserLabSelect"><option value="">اختار المعمل</option></select>
       </div>
       <div class="auth-error" id="newUserError" style="text-align:right;max-width:none;"></div>
       <button class="btn-mini" id="addUserBtn" style="width:100%;">إضافة المستخدم</button>
@@ -860,6 +939,29 @@
     <h2 class="section-title">إشعارات التعديلات <button class="btn-mini" id="markAllReadBtn" style="float:left;">تعليم الكل كمقروء</button></h2>
     <div class="stat-sub" style="margin-bottom:12px;">بيتسجل هنا كل مرة حد يعدّل أو يحذف إيصال، عشان تراجعها.</div>
     <div id="notifList"></div>
+  </div>
+
+  <!-- LAB PORTAL (lab accounts) -->
+  <div class="view" id="view-labportal">
+    <h2 class="section-title" id="labPortalTitle">أعمال المعمل</h2>
+    <div class="stat-sub" id="labPortalSummary" style="margin-bottom:10px;"></div>
+    <div class="import-step">
+      <h3>إضافة عمل جديد</h3>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="date" id="lpDate"></div>
+        <div class="field" style="margin-bottom:8px;"><select id="lpItem"><option value="">اختار الصنف</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpPatient" placeholder="اسم المريض / رقم الحالة"></div>
+        <div class="field" style="margin-bottom:8px;"><select id="lpDoctor"><option value="">الطبيب (اختياري)</option></select></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin-bottom:8px;"><input type="number" min="1" id="lpQty" value="1" placeholder="العدد"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpNotes" placeholder="ملاحظات (اختياري)"></div>
+      </div>
+      <button class="btn-mini" id="lpAddBtn" style="width:100%;">إرسال للعيادة للاعتماد</button>
+    </div>
+    <div id="labPortalList"></div>
   </div>
 
   <!-- APPROVALS (supervisor only) -->
@@ -884,7 +986,19 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="updateBanner" style="display:none;"><span>فيه نسخة جديدة من التطبيق</span><button id="updateNowBtn">تحديث الآن</button></div>
 <div id="printReceipt"><div id="printReceiptContent"></div></div>
+
+<!-- LAB IMPORT MODAL -->
+<div id="labImportModal">
+  <div class="plan-modal-box">
+    <div class="plan-modal-head">
+      <span id="labImportTitle">استيراد</span>
+      <button id="closeLabImportBtn">✕</button>
+    </div>
+    <div class="plan-modal-body" id="labImportBody"></div>
+  </div>
+</div>
 
 <!-- TREATMENT PLAN MODAL -->
 <div id="planModal">
@@ -912,6 +1026,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const __db = firebase.firestore();
+try{ __db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); }catch(e){ console.warn(e); }
 const __auth = firebase.auth();
 // تطبيق ثانوي منفصل يُستخدم بس لما المدير يعمل حساب لموظف جديد،
 // عشان إنشاء الحساب الجديد ميسجّلش خروج المدير من حسابه الحالي.
@@ -1002,7 +1117,7 @@ window.__firestoreClinicId = '';
 
   const SUPERVISOR_EMAIL = 'ahmed.abdallah.said1991@gmail.com';
   const PLATFORM_CLINIC_ID = '__platform__';
-  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال', purchasing:'مدير مشتريات', inventory:'أمين مخزن' };
+  const ROLE_LABEL = { manager:'مدير', doctor:'طبيب', reception:'استقبال', purchasing:'مدير مشتريات', inventory:'أمين مخزن', lab:'حساب معمل' };
 
   // ---------- Cross-clinic KV access (للمشرف العام بس) ----------
   async function getClinicKV(clinicId, key){
@@ -1034,7 +1149,8 @@ window.__firestoreClinicId = '';
     doctor: ['dash','add','records','patients','compare'],
     reception: ['add','records','expenses','patients'],
     purchasing: ['prices','inventory'],
-    inventory: ['prices','inventory']
+    inventory: ['prices','inventory'],
+    lab: ['labportal']
   };
   const PENDING_MANAGER_TABS = ['doctors','labs','prices','users'];
   let users = [];          // [{id, name, role, pin(hashed), linkedDoctor}]
@@ -1067,6 +1183,7 @@ window.__firestoreClinicId = '';
   }
 
   async function logAction(action){
+    if(currentUser && currentUser.role==='lab') return;
     auditLog.unshift({ ts: new Date().toISOString(), user: currentUser?currentUser.name:'—', role: currentUser?currentUser.role:'', action });
     if(auditLog.length>300) auditLog = auditLog.slice(0,300);
     try{ await window.storage.set(K.audit, JSON.stringify(auditLog), SHARED); }catch(e){ console.error(e); }
@@ -1148,9 +1265,10 @@ window.__firestoreClinicId = '';
     return entries.filter(e => periodKeyForDate(e.date) === key);
   }
   function labWorkInPeriod(key){
-    if(key==='all') return labsData.work;
-    if(key.startsWith('year:')){ const y=key.slice(5); return labsData.work.filter(w=>periodKeyForDate(w.date).startsWith(y+'-')); }
-    return labsData.work.filter(w => periodKeyForDate(w.date) === key);
+    const counted = labsData.work.filter(isCountedWork);
+    if(key==='all') return counted;
+    if(key.startsWith('year:')){ const y=key.slice(5); return counted.filter(w=>periodKeyForDate(w.date).startsWith(y+'-')); }
+    return counted.filter(w => periodKeyForDate(w.date) === key);
   }
   function adjustmentsInPeriod(key){
     if(key==='all') return adjustments;
@@ -1163,10 +1281,462 @@ window.__firestoreClinicId = '';
     return expenses.filter(x => periodKeyForDate(x.date) === key);
   }
 
-  async function loadAll(){
-    document.getElementById('topbarSub').textContent = 'جاري تحميل البيانات…';
-    const cd = document.getElementById('clinicCodeDisplay');
-    if(cd) cd.textContent = clinicCode;
+  function renderAll(){
+    if(currentUser && currentUser.role==='lab'){ renderLabPortal(); return; }
+    renderPeriodSelect(); renderFilterPeriodSelect();
+    renderDoctorSelects();
+    rebuildPatientDatalist();
+    rebuildServicesDatalist();
+    renderDashboard();
+    renderRecords();
+    renderExpenseFilterPeriod();
+    renderExpenses();
+    renderInventory();
+    renderPatients();
+    renderDoctorsSettings();
+    renderLabs();
+    renderServices();
+    renderCompareRangeOptions();
+    renderCompareChart();
+  }
+
+  // ---------- New version check (mobile cache fix) ----------
+  const CURRENT_BUILD = (document.querySelector('meta[name="app-build"]')||{}).content || '';
+  async function checkForNewVersion(){
+    try{
+      const res = await fetch(location.pathname + '?cb=' + Date.now(), { cache:'no-store' });
+      if(!res.ok) return;
+      const txt = await res.text();
+      const m = txt.match(/name="app-build" content="([^"]+)"/);
+      if(m && CURRENT_BUILD && m[1]!==CURRENT_BUILD) document.getElementById('updateBanner').style.display = 'flex';
+    }catch(e){}
+  }
+  document.getElementById('updateNowBtn').addEventListener('click', ()=>{ location.replace(location.pathname + '?v=' + Date.now()); });
+  setTimeout(checkForNewVersion, 4000);
+  setInterval(checkForNewVersion, 5*60*1000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkForNewVersion(); });
+  const footerEl = document.querySelector('.app-footer');
+  if(footerEl && CURRENT_BUILD) footerEl.insertAdjacentHTML('beforeend', `<div style="font-size:10px;opacity:.6;margin-top:6px;">إصدار ${CURRENT_BUILD}</div>`);
+
+  // ---------- Members + labs persistence (Firestore documents) ----------
+  let memberMode = false;   // true = العيادة اتحوّلت لنظام العضوية ومستندات المعامل
+  let membersSnap = {};     // uid -> json (آخر نسخة اتحفظت)
+  let labsSnap = {};        // docPath -> json أو 'f' (آخر نسخة اتحفظت)
+  const attCache = {};      // attachmentId -> dataUrl
+  const ATT_PART = 700000;
+  const clinicRef = ()=> __db.collection('clinics').doc(clinicCode);
+  const labsCol = ()=> clinicRef().collection('labs');
+  const cleanJson = o => JSON.parse(JSON.stringify(o));
+  function isCountedWork(w){ return w.approval!=='pending' && w.approval!=='rejected'; }
+
+  function memberData(u){
+    const d = { uid:u.uid, name:u.name||'', email:u.email||'', role:u.role, linkedDoctor:u.linkedDoctor||'' };
+    if(u.labId) d.labId = u.labId;
+    if(u.approved) d.approved = u.approved;
+    if(u.autoEmail) d.autoEmail = true;
+    if(u.createdAt) d.createdAt = u.createdAt;
+    return d;
+  }
+  async function readMemberDoc(uid){
+    try{
+      const d = await clinicRef().collection('members').doc(uid).get();
+      return d.exists ? Object.assign({ id:uid, uid }, d.data()) : null;
+    }catch(e){ return null; }
+  }
+  async function fetchUsersFor(){
+    if(!memberMode) return fetchLegacyUsers();
+    if(currentUser && currentUser.role==='manager'){
+      try{
+        const snap = await clinicRef().collection('members').get();
+        const arr = snap.docs.map(d=>Object.assign({ id:d.id, uid:d.id }, d.data()));
+        membersSnap = {};
+        arr.forEach(u=>{ membersSnap[u.uid] = JSON.stringify(cleanJson(memberData(u))); });
+        return arr;
+      }catch(e){ console.warn(e); }
+    }
+    return currentUser ? [currentUser] : [];
+  }
+  async function saveUsers(){
+    let ok = true;
+    if(memberMode){
+      try{
+        const base = clinicRef().collection('members');
+        const batch = __db.batch(); let n = 0;
+        users.forEach(u=>{
+          const data = cleanJson(memberData(u));
+          if(membersSnap[u.uid]!==JSON.stringify(data)){ batch.set(base.doc(u.uid), data); n++; }
+        });
+        Object.keys(membersSnap).forEach(uid=>{ if(!users.some(u=>u.uid===uid)){ batch.delete(base.doc(uid)); n++; } });
+        if(n) await batch.commit();
+        membersSnap = {};
+        users.forEach(u=>{ membersSnap[u.uid] = JSON.stringify(cleanJson(memberData(u))); });
+      }catch(e){ console.error(e); ok = false; toast('تعذر حفظ المستخدمين — راجع الصلاحيات'); }
+    }
+    try{ await window.storage.set(K.users, JSON.stringify(users), SHARED); }
+    catch(e){ if(!memberMode){ console.error(e); ok = false; } }
+    return ok;
+  }
+
+  // ----- labs -----
+  function labDocContent(lab){
+    return {
+      name: lab.name||'', doctorList: lab.doctorList||[], lastActivityAt: lab.lastActivityAt||'',
+      items: labsData.items.filter(i=>i.labId===lab.id).map(i=>({ id:i.id, name:i.name, price:i.price })),
+      attachments: (lab.attachments||[]).map(a=>({ id:a.id, name:a.name, mime:a.mime||'', size:a.size||0, uploadedAt:a.uploadedAt||'', parts: Math.max(1, Math.ceil((a.dataUrl||'').length/ATT_PART)) }))
+    };
+  }
+  async function loadLabsData(){
+    const empty = ()=>({ labs:[], items:[], work:[], invoices:[] });
+    if(!memberMode){
+      try{ const r = await window.storage.get(K.labs, SHARED); labsData = r ? JSON.parse(r.value) : empty(); }
+      catch(e){ labsData = empty(); }
+      if(!labsData.invoices) labsData.invoices = [];
+      return;
+    }
+    const data = empty();
+    const snap = {};
+    try{
+      const role = currentUser ? currentUser.role : '';
+      const isLab = role==='lab', isMgr = role==='manager';
+      let labDocs = [];
+      if(isLab){ const d = await labsCol().doc(currentUser.labId).get(); labDocs = d.exists ? [d] : []; }
+      else labDocs = (await labsCol().get()).docs;
+      for(const d of labDocs){
+        const ld = d.data();
+        const lab = { id:d.id, name:ld.name||'', doctorList: ld.doctorList||[], lastActivityAt: ld.lastActivityAt||'', attachments:[] };
+        (ld.items||[]).forEach(i=>data.items.push({ id:i.id, labId:d.id, name:i.name, price:i.price }));
+        if(isMgr){
+          for(const a of (ld.attachments||[])){
+            let dataUrl = attCache[a.id];
+            if(!dataUrl){
+              let s = '';
+              for(let i=0;i<(a.parts||1);i++){
+                const pd = await d.ref.collection('files').doc(a.id+'__'+i).get();
+                s += pd.exists ? (pd.data().part||'') : '';
+              }
+              dataUrl = s; attCache[a.id] = s;
+            }
+            lab.attachments.push({ id:a.id, name:a.name, mime:a.mime, size:a.size, uploadedAt:a.uploadedAt, dataUrl });
+          }
+        }
+        data.labs.push(lab);
+        const ws = await d.ref.collection('work').get();
+        ws.docs.forEach(x=>data.work.push(Object.assign({ id:x.id, labId:d.id }, x.data())));
+        if(isMgr){
+          const is = await d.ref.collection('invoices').get();
+          is.docs.forEach(x=>data.invoices.push(Object.assign({ id:x.id, labId:d.id }, x.data())));
+        }
+      }
+      labsData = data;
+      data.labs.forEach(l=>{
+        if(!isLab) snap[labsCol().doc(l.id).path] = JSON.stringify(labDocContent(l));
+        (l.attachments||[]).forEach(a=>{ const n = Math.max(1, Math.ceil((a.dataUrl||'').length/ATT_PART)); for(let i=0;i<n;i++) snap[labsCol().doc(l.id).collection('files').doc(a.id+'__'+i).path] = 'f'; });
+      });
+      data.work.forEach(w=>{ snap[labsCol().doc(w.labId).collection('work').doc(w.id).path] = JSON.stringify(cleanJson(w)); });
+      data.invoices.forEach(v=>{ snap[labsCol().doc(v.labId).collection('invoices').doc(v.id).path] = JSON.stringify(cleanJson(v)); });
+      labsSnap = snap;
+    }catch(e){
+      console.error(e);
+      toast('تعذر تحميل بيانات المعامل');
+      labsData = empty();
+    }
+  }
+
+  async function saveLabs(){
+    if(!memberMode){
+      try{ await window.storage.set(K.labs, JSON.stringify(labsData), SHARED); return true; }
+      catch(e){ console.error(e); toast('تعذر الحفظ، الحجم الكلي كبير جدًا'); return false; }
+    }
+    try{
+      const role = currentUser ? currentUser.role : '';
+      const isLab = role==='lab';
+      const base = labsCol();
+      const stamp = new Date().toISOString();
+      const ops = [];
+      const want = new Set();
+      const touched = new Set();
+
+      labsData.work.forEach(w=>{
+        const ref = base.doc(w.labId).collection('work').doc(w.id);
+        want.add(ref.path);
+        const data = cleanJson(w); const j = JSON.stringify(data);
+        if(labsSnap[ref.path]!==j){ ops.push({ t:'set', ref, data, path:ref.path, j }); touched.add(w.labId); }
+      });
+      if(!isLab){
+        (labsData.invoices||[]).forEach(v=>{
+          const ref = base.doc(v.labId).collection('invoices').doc(v.id);
+          want.add(ref.path);
+          const data = cleanJson(v); const j = JSON.stringify(data);
+          if(labsSnap[ref.path]!==j){ ops.push({ t:'set', ref, data, path:ref.path, j }); touched.add(v.labId); }
+        });
+        labsData.labs.forEach(lab=>{
+          const labRef = base.doc(lab.id);
+          want.add(labRef.path);
+          if(role==='manager') lab.doctorList = doctorNames();
+          (lab.attachments||[]).forEach(a=>{
+            const n = Math.max(1, Math.ceil((a.dataUrl||'').length/ATT_PART));
+            for(let i=0;i<n;i++){
+              const fref = labRef.collection('files').doc(a.id+'__'+i);
+              want.add(fref.path);
+              if(!labsSnap[fref.path]){ ops.push({ t:'set', ref:fref, data:{ part:(a.dataUrl||'').slice(i*ATT_PART,(i+1)*ATT_PART) }, path:fref.path, j:'f' }); touched.add(lab.id); }
+            }
+            attCache[a.id] = a.dataUrl;
+          });
+        });
+      }
+      // deletions
+      Object.keys(labsSnap).forEach(p=>{
+        if(want.has(p)) return;
+        if(isLab && p.indexOf('/work/')<0) return;
+        const m = p.match(/labs\/([^\/]+)\//); if(m) touched.add(m[1]);
+        ops.push({ t:'del', ref:__db.doc(p), path:p });
+      });
+      // lab docs (after touched is known)
+      if(!isLab){
+        labsData.labs.forEach(lab=>{
+          if(touched.has(lab.id)) lab.lastActivityAt = stamp;
+          const data = cleanJson(labDocContent(lab)); const j = JSON.stringify(data);
+          const ref = base.doc(lab.id);
+          if(labsSnap[ref.path]!==j) ops.push({ t:'set', ref, data, path:ref.path, j });
+        });
+      } else {
+        touched.forEach(id=>{ ops.push({ t:'upd', ref: base.doc(id), data:{ lastActivityAt: stamp }, path:null }); });
+      }
+      // تنفيذ على دفعات
+      for(let i=0;i<ops.length;i+=400){
+        const batch = __db.batch();
+        ops.slice(i,i+400).forEach(o=>{
+          if(o.t==='set') batch.set(o.ref, o.data);
+          else if(o.t==='upd') batch.update(o.ref, o.data);
+          else batch.delete(o.ref);
+        });
+        await batch.commit();
+      }
+      ops.forEach(o=>{
+        if(o.t==='set') labsSnap[o.path] = o.j;
+        else if(o.t==='del') delete labsSnap[o.path];
+      });
+      return true;
+    }catch(e){
+      console.error(e);
+      toast('تعذر حفظ بيانات المعامل — راجع الاتصال أو الصلاحيات');
+      return false;
+    }
+  }
+
+  // ----- migration of a legacy clinic -----
+  async function migrateClinicToMembers(){
+    if(memberMode || !currentUser || currentUser.role!=='manager') return false;
+    try{
+      const rootRef = clinicRef();
+      const root = await rootRef.get();
+      if(!root.exists) await rootRef.set({ ownerUid: currentUser.uid, createdAt: new Date().toISOString(), migrationVersion: 2 });
+      const all = users.length ? users : [currentUser];
+      const ordered = [currentUser].concat(all.filter(u=>u.uid!==currentUser.uid));
+      const base = rootRef.collection('members');
+      for(const u of ordered){ await base.doc(u.uid).set(cleanJson(memberData(u))); }
+      memberMode = true; membersSnap = {}; labsSnap = {};
+      ordered.forEach(u=>{ membersSnap[u.uid] = JSON.stringify(cleanJson(memberData(u))); });
+      const ok = await saveLabs();
+      if(!ok){ memberMode = false; return false; }
+      await rootRef.update({ labsMigrated:true, migratedAt:new Date().toISOString() });
+      logAction('ترحيل العيادة لنظام العضوية ومستندات المعامل');
+      toast('تم تحويل العيادة لنظام الأمان الجديد ✅');
+      return true;
+    }catch(e){
+      console.error(e);
+      memberMode = false;
+      toast('تعذر ترحيل العيادة — هتفضل شغالة بالنظام القديم');
+      return false;
+    }
+  }
+  function refreshSecurityStatus(){
+    const el = document.getElementById('securityStatus');
+    if(!el) return;
+    if(!currentUser || currentUser.role!=='manager'){ el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = memberMode
+      ? `✅ العيادة على نظام الأمان الجديد (${users.length} عضو). قواعد Firestore الجديدة تقدر تتنشر دلوقتي.`
+      : `⚠️ العيادة لسه على النظام القديم. <button class="btn-mini gold" id="migrateNowBtn" style="margin-right:8px;">ترحيل الآن</button>`;
+    const b = document.getElementById('migrateNowBtn');
+    if(b) b.addEventListener('click', async ()=>{
+      b.disabled = true;
+      const ok = await migrateClinicToMembers();
+      if(ok){ users = await fetchUsersFor(); await loadData({ kv:false }); renderAll(); applyRolePermissions(); startRealtimeSync(); }
+      refreshSecurityStatus();
+    });
+  }
+
+  // ---------- Lab portal (حساب المعمل) ----------
+  const LAB_STATUSES = ['جديد','قيد التنفيذ','جاهز','تم التسليم'];
+  function pendingLabCount(){ return labsData.work.filter(w=>w.approval==='pending').length; }
+  function renderLabPortal(){
+    if(!currentUser || currentUser.role!=='lab') return;
+    const lab = labsData.labs.find(l=>l.id===currentUser.labId);
+    document.getElementById('labPortalTitle').textContent = lab ? ('أعمال معمل: ' + lab.name) : 'المعمل غير موجود';
+    const box = document.getElementById('labPortalList');
+    if(!lab){ box.innerHTML = '<div class="empty-note">المعمل المرتبط بحسابك مش موجود — كلّم العيادة</div>'; return; }
+    const items = labsData.items.filter(i=>i.labId===lab.id);
+    document.getElementById('lpItem').innerHTML = '<option value="">اختار الصنف</option>' + items.map(i=>`<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+    document.getElementById('lpDoctor').innerHTML = '<option value="">الطبيب (اختياري)</option>' + (lab.doctorList||[]).map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    if(!document.getElementById('lpDate').value) document.getElementById('lpDate').value = new Date().toISOString().slice(0,10);
+    const works = labsData.work.filter(w=>w.labId===lab.id).sort((a,b)=>a.date<b.date?1:(a.date>b.date?-1:0));
+    const pend = works.filter(w=>w.approval==='pending').length;
+    document.getElementById('labPortalSummary').textContent = `${works.length} عمل · بانتظار اعتماد العيادة: ${pend}`;
+    if(!works.length){ box.innerHTML = '<div class="empty-note">لا توجد أعمال بعد</div>'; return; }
+    const apprLabel = w => w.approval==='pending' ? '⏳ بانتظار الاعتماد' : (w.approval==='rejected' ? '❌ مرفوض' : '✅ معتمد');
+    box.innerHTML = works.map(w=>`
+      <div class="audit-item">
+        <div class="a-top"><span class="a-user">${escapeHtml(w.patient||'—')}</span><span>${escapeHtml(w.date||'')}</span></div>
+        ${escapeHtml(w.itemName||'')} × ${w.qty}${w.doctor?(' · د. '+escapeHtml(w.doctor)):''}${w.notes?(' · '+escapeHtml(w.notes)):''}
+        <div class="stat-sub" style="margin:4px 0;">${apprLabel(w)}${w.approval==='rejected'&&w.rejectReason?(' — '+escapeHtml(w.rejectReason)):''}${(isCountedWork(w)&&w.total)?(' · الإجمالي '+fmt(w.total)+' ج.م'):''}</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="status-select lp-status" data-id="${w.id}">${LAB_STATUSES.map(s=>`<option ${(w.status||'جديد')===s?'selected':''}>${s}</option>`).join('')}</select>
+          ${w.approval==='pending' ? `<button class="row-del lp-del" data-id="${w.id}">حذف ✕</button>` : ''}
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('.lp-status').forEach(s=>s.addEventListener('change', async ()=>{
+      const w = labsData.work.find(x=>x.id===s.dataset.id); if(!w) return;
+      w.status = s.value; w.statusAt = new Date().toISOString(); w.statusBy = currentUser.name;
+      if(await saveLabs()) toast('تم تحديث الحالة');
+    }));
+    box.querySelectorAll('.lp-del').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('حذف العمل ده؟')) return;
+      labsData.work = labsData.work.filter(x=>x.id!==b.dataset.id);
+      await saveLabs(); renderLabPortal();
+    }));
+  }
+  document.getElementById('lpAddBtn').addEventListener('click', async ()=>{
+    if(!currentUser || currentUser.role!=='lab') return;
+    const lab = labsData.labs.find(l=>l.id===currentUser.labId); if(!lab) return;
+    const item = labsData.items.find(i=>i.id===document.getElementById('lpItem').value);
+    const patient = document.getElementById('lpPatient').value.trim();
+    const qty = parseFloat(document.getElementById('lpQty').value)||0;
+    if(!item){ toast('اختار الصنف'); return; }
+    if(!patient){ toast('اكتب اسم المريض أو رقم الحالة'); return; }
+    if(qty<=0){ toast('اكتب عدد صحيح'); return; }
+    labsData.work.push({
+      id: genId(), labId: lab.id, date: document.getElementById('lpDate').value || new Date().toISOString().slice(0,10),
+      patient, doctor: document.getElementById('lpDoctor').value, itemId: item.id, itemName: item.name, qty,
+      notes: document.getElementById('lpNotes').value.trim(), status:'جديد', approval:'pending',
+      unitPrice:0, discPct:0, total:0, createdBy: currentUser.name, createdAt: new Date().toISOString()
+    });
+    if(await saveLabs()){
+      toast('اتبعت للعيادة للاعتماد');
+      document.getElementById('lpPatient').value=''; document.getElementById('lpNotes').value=''; document.getElementById('lpQty').value=1;
+    }
+    renderLabPortal();
+  });
+
+  // ---------- Manager: approve lab-submitted work ----------
+  async function approveLabWork(w){
+    const item = labsData.items.find(it=>it.id===w.itemId) || labsData.items.find(it=>it.labId===w.labId && normName(it.name)===normName(w.itemName));
+    if(!item){ toast('الصنف "'+w.itemName+'" مش في قائمة أسعار المعمل — أضفه الأول'); return false; }
+    const doc = doctorNames().find(n=>normName(n)===normName(w.doctor||''));
+    Object.assign(w, {
+      approval:'approved', itemId:item.id, itemName:item.name, unitPrice:item.price, discPct:w.discPct||0,
+      total: w.qty*item.price*(1-(w.discPct||0)/100), doctor: doc||'',
+      approvedBy: currentUser?currentUser.name:'—', approvedAt: new Date().toISOString()
+    });
+    return true;
+  }
+
+  // ---------- Realtime sync between devices ----------
+  let kvUnsub = null, memberUnsub = null, labsUnsub = null, remoteTimer = null;
+  let kvFirst = true, memberFirst = true, labsFirst = true;
+  const pendingKinds = new Set();
+  function stopRealtimeSync(){
+    [kvUnsub, memberUnsub, labsUnsub].forEach(u=>{ if(u){ try{ u(); }catch(e){} } });
+    kvUnsub = memberUnsub = labsUnsub = null;
+    if(remoteTimer){ clearTimeout(remoteTimer); remoteTimer = null; }
+    pendingKinds.clear();
+  }
+  function startRealtimeSync(){
+    stopRealtimeSync();
+    if(!clinicCode || !currentUser) return;
+    const isLab = currentUser.role==='lab';
+    if(!isLab){
+      kvFirst = true;
+      kvUnsub = clinicRef().collection('kv').onSnapshot(snap=>{
+        if(kvFirst){ kvFirst = false; return; }
+        if(snap.docChanges().some(ch => !ch.doc.metadata.hasPendingWrites)) scheduleRemoteRefresh('kv');
+      }, err=>console.warn('realtime sync error', err));
+    }
+    if(memberMode){
+      memberFirst = true;
+      memberUnsub = clinicRef().collection('members').doc(currentUser.uid).onSnapshot(doc=>{
+        if(memberFirst){ memberFirst = false; return; }
+        if(doc.metadata.hasPendingWrites) return;
+        if(!doc.exists){ toast('تم إلغاء حسابك من العيادة'); logout(); return; }
+        const fresh = Object.assign({ id:doc.id, uid:doc.id }, doc.data());
+        if(JSON.stringify(cleanJson(memberData(fresh))) !== JSON.stringify(cleanJson(memberData(currentUser)))){
+          currentUser = fresh;
+          applyRolePermissions();
+          toast('اتحدّثت صلاحيات حسابك');
+        }
+      }, err=>console.warn('member sync error', err));
+      labsFirst = true;
+      const src = isLab ? labsCol().doc(currentUser.labId) : ((currentUser.role==='manager'||currentUser.role==='doctor') ? labsCol() : null);
+      if(src){
+        labsUnsub = src.onSnapshot(snap=>{
+          if(labsFirst){ labsFirst = false; return; }
+          const changed = snap.docChanges ? snap.docChanges().some(ch=>!ch.doc.metadata.hasPendingWrites) : !snap.metadata.hasPendingWrites;
+          if(changed) scheduleRemoteRefresh('labs');
+        }, err=>console.warn('labs sync error', err));
+      }
+    }
+  }
+  function userIsBusy(){
+    const a = document.activeElement;
+    const typing = a && ['INPUT','TEXTAREA','SELECT'].includes(a.tagName) && a.closest('#app');
+    return !!typing || document.getElementById('planModal').classList.contains('open') || document.getElementById('labImportModal').classList.contains('open');
+  }
+  function scheduleRemoteRefresh(kind){
+    if(kind) pendingKinds.add(kind);
+    if(remoteTimer) clearTimeout(remoteTimer);
+    remoteTimer = setTimeout(async ()=>{
+      remoteTimer = null;
+      if(!currentUser) return;
+      if(userIsBusy()){ scheduleRemoteRefresh(); return; }
+      await refreshFromRemote();
+    }, userIsBusy() ? 4000 : 800);
+  }
+  async function refreshFromRemote(){
+    if(!currentUser) return;
+    const kinds = new Set(pendingKinds); pendingKinds.clear();
+    if(!kinds.size) kinds.add('kv');
+    const prevPending = pendingLabCount();
+    await loadData({ kv: kinds.has('kv'), labs: kinds.has('labs') });
+    if(kinds.has('kv') && currentUser.role!=='lab'){
+      try{
+        const fresh = await fetchUsersFor();
+        if(fresh.length){
+          users = fresh;
+          const me = fresh.find(u=>u.uid===currentUser.uid);
+          if(me){
+            const changed = JSON.stringify(me)!==JSON.stringify(currentUser);
+            currentUser = me;
+            if(changed) applyRolePermissions();
+          }
+        }
+      }catch(e){ console.warn(e); }
+    }
+    document.getElementById('topbarSub').textContent = currentUser.role==='lab' ? 'بوابة المعمل' : (entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية');
+    renderAll();
+    if(typeof renderNotifBadge==='function') renderNotifBadge();
+    const nowPending = pendingLabCount();
+    if(currentUser.role==='manager' && nowPending>prevPending) toast(`فيه ${nowPending-prevPending} عمل جديد من المعمل بانتظار اعتمادك`);
+    else toast('تم تحديث البيانات من جهاز تاني');
+  }
+
+  async function loadData(opts){
+    opts = opts || {};
+    if(currentUser && currentUser.role==='lab'){
+      entries=[]; doctors=[]; patients=[]; settings={ me:'' }; services=[]; adjustments=[]; auditLog=[]; notifications=[]; expenses=[]; inventoryItems=[]; inventoryTx=[]; treatmentPlans=[];
+      await loadLabsData();
+      return;
+    }
+    if(opts.kv===false){ if(opts.labs!==false) await loadLabsData(); return; }
     try{ const r = await window.storage.get(K.entries, SHARED); entries = r ? JSON.parse(r.value) : []; }catch(e){ entries = []; }
     try{
       const r = await window.storage.get(K.doctors, SHARED);
@@ -1184,7 +1754,6 @@ window.__firestoreClinicId = '';
     }catch(e){ doctors = []; }
     try{ const r = await window.storage.get(K.patients, SHARED); patients = r ? JSON.parse(r.value) : []; }catch(e){ patients = []; }
     try{ const r = await window.storage.get(K.settings, SHARED); settings = r ? JSON.parse(r.value) : { me:'' }; }catch(e){ settings = { me:'' }; }
-    try{ const r = await window.storage.get(K.labs, SHARED); labsData = r ? JSON.parse(r.value) : { labs:[], items:[], work:[] }; }catch(e){ labsData = { labs:[], items:[], work:[] }; }
     try{ const r = await window.storage.get(K.services, SHARED); services = r ? JSON.parse(r.value) : []; }catch(e){ services = []; }
     try{ const r = await window.storage.get(K.adjustments, SHARED); adjustments = r ? JSON.parse(r.value) : []; }catch(e){ adjustments = []; }
     try{ const r = await window.storage.get(K.audit, SHARED); auditLog = r ? JSON.parse(r.value) : []; }catch(e){ auditLog = []; }
@@ -1193,24 +1762,19 @@ window.__firestoreClinicId = '';
     try{ const r = await window.storage.get(K.inventoryItems, SHARED); inventoryItems = r ? JSON.parse(r.value) : []; }catch(e){ inventoryItems = []; }
     try{ const r = await window.storage.get(K.inventoryTx, SHARED); inventoryTx = r ? JSON.parse(r.value) : []; }catch(e){ inventoryTx = []; }
     try{ const r = await window.storage.get(K.treatmentPlans, SHARED); treatmentPlans = r ? JSON.parse(r.value) : []; }catch(e){ treatmentPlans = []; }
-    document.getElementById('topbarSub').textContent = entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية';
+    if(opts.labs!==false) await loadLabsData();
+  }
+
+  async function loadAll(){
+    document.getElementById('topbarSub').textContent = 'جاري تحميل البيانات…';
+    const cd = document.getElementById('clinicCodeDisplay');
+    if(cd) cd.textContent = clinicCode;
+    await loadData();
+    document.getElementById('topbarSub').textContent = (currentUser && currentUser.role==='lab') ? 'بوابة المعمل' : (entries.length ? ('عدد العمليات المسجلة: ' + entries.length) : 'ابدأ بإضافة أول عملية');
 
     selectedPeriod = currentPeriodKey();
-    renderPeriodSelect(); renderFilterPeriodSelect();
-    renderDoctorSelects();
-    rebuildPatientDatalist();
-    rebuildServicesDatalist();
-    renderDashboard();
-    renderRecords();
-    renderExpenseFilterPeriod();
-    renderExpenses();
-    renderInventory();
-    renderPatients();
-    renderDoctorsSettings();
-    renderLabs();
-    renderServices();
-    renderCompareRangeOptions();
-    renderCompareChart();
+    renderAll();
+    startRealtimeSync();
 
     setTimeout(()=>{
       const splash = document.getElementById('splashScreen');
@@ -1222,16 +1786,15 @@ window.__firestoreClinicId = '';
   async function saveDoctors(){ try{ await window.storage.set(K.doctors, JSON.stringify(doctors), SHARED); }catch(e){ console.error(e); } }
   async function savePatients(){ try{ await window.storage.set(K.patients, JSON.stringify(patients), SHARED); }catch(e){ console.error(e); } }
   async function saveSettings(){ try{ await window.storage.set(K.settings, JSON.stringify(settings), SHARED); }catch(e){ console.error(e); } }
-  async function saveLabs(){ try{ await window.storage.set(K.labs, JSON.stringify(labsData), SHARED); return true; }catch(e){ console.error(e); toast('تعذر الحفظ، الحجم الكلي كبير جدًا'); return false; } }
   async function saveServices(){ try{ await window.storage.set(K.services, JSON.stringify(services), SHARED); }catch(e){ console.error(e); } }
   async function saveAdjustments(){ try{ await window.storage.set(K.adjustments, JSON.stringify(adjustments), SHARED); }catch(e){ console.error(e); } }
-  async function saveUsers(){ try{ await window.storage.set(K.users, JSON.stringify(users), SHARED); }catch(e){ console.error(e); } }
   async function saveNotifications(){ try{ await window.storage.set(K.notifications, JSON.stringify(notifications), SHARED); }catch(e){ console.error(e); } }
   async function saveExpenses(){ try{ await window.storage.set(K.expenses, JSON.stringify(expenses), SHARED); }catch(e){ console.error(e); } }
   async function saveInventoryItems(){ try{ await window.storage.set(K.inventoryItems, JSON.stringify(inventoryItems), SHARED); }catch(e){ console.error(e); } }
   async function saveInventoryTx(){ try{ await window.storage.set(K.inventoryTx, JSON.stringify(inventoryTx), SHARED); }catch(e){ console.error(e); } }
   async function saveTreatmentPlans(){ try{ await window.storage.set(K.treatmentPlans, JSON.stringify(treatmentPlans), SHARED); }catch(e){ console.error(e); } }
   async function notifyManagers(message){
+    if(currentUser && currentUser.role==='lab') return;
     notifications.unshift({ id: genId(), ts: new Date().toISOString(), message, read:false });
     if(notifications.length>200) notifications = notifications.slice(0,200);
     await saveNotifications();
@@ -1254,6 +1817,7 @@ window.__firestoreClinicId = '';
     if(name==='audit') renderAuditLog();
     if(name==='notifications') renderNotifications();
     if(name==='approvals') renderApprovals();
+    if(name==='labportal') renderLabPortal();
   }
   document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click', ()=>switchTab(btn.dataset.view)));
 
@@ -1263,6 +1827,7 @@ window.__firestoreClinicId = '';
     entries.forEach(e=>keys.add(periodKeyForDate(e.date)));
     labsData.work.forEach(w=>{ if(w.date) keys.add(periodKeyForDate(w.date)); });
     expenses.forEach(x=>{ if(x.date) keys.add(periodKeyForDate(x.date)); });
+    inventoryTx.forEach(t=>{ if(t.date) keys.add(periodKeyForDate(t.date)); });
     const sorted = Array.from(keys).sort().reverse();
     const years = Array.from(new Set(sorted.map(k=>k.split('-')[0]))).sort().reverse();
     const yearOptions = years.map(y=>`<option value="year:${y}">📅 السنة المحاسبية ${y}</option>`).join('');
@@ -1304,10 +1869,90 @@ window.__firestoreClinicId = '';
   function rebuildPatientDatalist(){
     const dl = document.getElementById('patientsDatalist');
     dl.innerHTML = patients.map(p=>`<option value="${escapeHtml(p.name)}">`).join('');
+    const ml = document.getElementById('medNumsDatalist');
+    if(ml) ml.innerHTML = patients.filter(p=>p.medNum).map(p=>`<option value="${escapeHtml(p.medNum)}">${escapeHtml(p.name)}</option>`).join('');
   }
+
+  // ---------- Name similarity helpers ----------
+  function normName(s){
+    return (s||'').toString().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').toLowerCase().replace(/\s+/g,' ').trim();
+  }
+  function lev(a,b){
+    const m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+    let prev = Array.from({length:n+1},(_,i)=>i);
+    for(let i=1;i<=m;i++){
+      const cur=[i];
+      for(let j=1;j<=n;j++){
+        cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      }
+      prev=cur;
+    }
+    return prev[n];
+  }
+  function nameSimilarity(a,b){
+    const x=normName(a), y=normName(b);
+    if(!x||!y) return 0;
+    if(x===y) return 1;
+    const tx=x.split(' ').sort().join(' '), ty=y.split(' ').sort().join(' ');
+    if(tx===ty) return 0.98;
+    const r1 = 1 - lev(x,y)/Math.max(x.length,y.length);
+    const r2 = 1 - lev(tx,ty)/Math.max(tx.length,ty.length);
+    return Math.max(r1,r2);
+  }
+  function findSimilarPatients(name, limit){
+    const out = [];
+    patients.forEach(p=>{
+      if(norm(p.name)===norm(name)) return;
+      const s = nameSimilarity(name, p.name);
+      if(s>=0.85) out.push({p, s});
+    });
+    return out.sort((a,b)=>b.s-a.s).slice(0, limit||3);
+  }
+  function patientByMedNum(med){
+    if(!med) return null;
+    return patients.find(p=>p.medNum && norm(p.medNum)===norm(med)) || null;
+  }
+  // يرجّع خطأ لو الرقم الطبي تابع لمريض تاني، أو changeFrom لو المريض له رقم مختلف
+  function checkMedNumConflict(name, med){
+    if(!med) return {};
+    const owner = patientByMedNum(med);
+    const p = patients.find(x=>norm(x.name)===norm(name));
+    if(owner && (!p || owner.id!==p.id)) return { error: `الرقم الطبي ${med} مسجل للمريض "${owner.name}" — الرقم الطبي ما ينفعش يتكرر`, owner };
+    if(p && p.medNum && norm(p.medNum)!==norm(med)) return { changeFrom: p.medNum, patient: p };
+    return {};
+  }
+  function updateMedNumStatus(userTriggered){
+    const el = document.getElementById('medNumStatus');
+    const medInput = document.getElementById('fMedNum');
+    const nameInput = document.getElementById('fPatient');
+    const med = medInput.value.trim();
+    if(!med){ el.className='patient-status'; el.innerHTML=''; return; }
+    const owner = patientByMedNum(med);
+    const name = nameInput.value.trim();
+    if(!owner){ el.className='patient-status new'; el.textContent='🆕 رقم طبي جديد'; return; }
+    if(!name && userTriggered){
+      nameInput.value = owner.name;
+      updatePatientStatus();
+      el.className='patient-status existing'; el.textContent='✅ الرقم ده للمريض: ' + owner.name;
+      return;
+    }
+    if(norm(owner.name)===norm(name)){ el.className='patient-status existing'; el.textContent='✅ الرقم ده للمريض: ' + owner.name; return; }
+    el.className='patient-status new';
+    el.innerHTML = `⚠️ الرقم ده مسجل للمريض "${escapeHtml(owner.name)}" — <a href="#" id="useOwnerNameLink" style="color:var(--gold);">استخدم الاسم ده</a>`;
+    document.getElementById('useOwnerNameLink').addEventListener('click', ev=>{
+      ev.preventDefault();
+      nameInput.value = owner.name;
+      updatePatientStatus(); updateMedNumStatus(false);
+    });
+  }
+  document.getElementById('fMedNum').addEventListener('input', ()=>updateMedNumStatus(true));
+  document.getElementById('fMedNum').addEventListener('change', ()=>updateMedNumStatus(true));
+  document.getElementById('fPatient').addEventListener('input', ()=>updateMedNumStatus(false));
   function updatePatientStatus(){
     const name = document.getElementById('fPatient').value.trim();
     const el = document.getElementById('patientStatus');
+    const simBox = document.getElementById('similarList');
+    simBox.innerHTML = '';
     if(!name){ el.className = 'patient-status'; el.textContent=''; document.getElementById('outstandingList').innerHTML=''; return; }
     const p = patients.find(p=>norm(p.name)===norm(name));
     if(p){
@@ -1323,6 +1968,19 @@ window.__firestoreClinicId = '';
       el.className = 'patient-status new';
       el.textContent = '🆕 مريض جديد';
       document.getElementById('outstandingList').innerHTML = '';
+      if(name.length>=4 && !editingId){
+        const sims = findSimilarPatients(name, 3);
+        if(sims.length){
+          simBox.innerHTML = `<div class="stat-sub" style="margin:4px 0 6px;">⚠️ فيه مرضى بأسماء مشابهة — لو هو نفس الشخص اختاره بدل ما تعمل مريض جديد:</div>` +
+            sims.map(x=>`<button type="button" class="btn-mini similar-pick" data-id="${x.p.id}" style="margin:0 0 6px;width:100%;text-align:right;">${escapeHtml(x.p.name)}${x.p.medNum?(' — رقم طبي '+escapeHtml(x.p.medNum)):''} (${entries.filter(e=>e.patientId===x.p.id).length} إيصال)</button>`).join('');
+          simBox.querySelectorAll('.similar-pick').forEach(b=>b.addEventListener('click', ()=>{
+            const sp = patients.find(v=>v.id===b.dataset.id); if(!sp) return;
+            document.getElementById('fPatient').value = sp.name;
+            if(sp.medNum && !document.getElementById('fMedNum').value.trim()) document.getElementById('fMedNum').value = sp.medNum;
+            updatePatientStatus(); updateMedNumStatus(false);
+          }));
+        }
+      }
     }
   }
   document.getElementById('fPatient').addEventListener('input', updatePatientStatus);
@@ -1501,6 +2159,7 @@ window.__firestoreClinicId = '';
     document.getElementById('continuePaymentBanner').style.display = 'none';
     document.getElementById('submitBtn').textContent = 'حفظ العملية';
     updatePatientStatus();
+    updateMedNumStatus(false);
     checkReceiptDuplicate();
   }
   document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
@@ -1512,6 +2171,13 @@ window.__firestoreClinicId = '';
     const medNum = document.getElementById('fMedNum').value.trim();
     if(!patientName){ toast('اكتب اسم المريض'); return; }
     if(!checkReceiptDuplicate()){ toast('رقم الايصال مكرر، عدّله'); return; }
+    const medCheck = checkMedNumConflict(patientName, medNum);
+    if(medCheck.error){ toast(medCheck.error); return; }
+    let medChangeApproved = false;
+    if(medCheck.changeFrom){
+      if(!confirm(`المريض "${medCheck.patient.name}" رقمه الطبي المسجل ${medCheck.changeFrom}. تغيّره إلى ${medNum} في كل إيصالاته؟`)) return;
+      medChangeApproved = true;
+    }
 
     const currentName = document.getElementById('fProc').value.trim();
     const currentValue = currentUnitTotal();
@@ -1527,6 +2193,10 @@ window.__firestoreClinicId = '';
     }
 
     const p = findOrCreatePatient(patientName, medNum);
+    if(medChangeApproved){
+      p.medNum = medNum;
+      entries.forEach(en=>{ if(en.patientId===p.id) en.medNum = medNum; });
+    }
     const data = {
       date: document.getElementById('fDate').value,
       patient: patientName,
@@ -1682,7 +2352,7 @@ window.__firestoreClinicId = '';
       return periodKeyForDate(w.date)===periodKey;
     };
     const matchesDoctor = w => doctorFilter==='__all__' ? true : (doctorFilter==='__none__' ? !w.doctor : w.doctor===doctorFilter);
-    const work = labsData.work.filter(w=>w.labId===labId && inPeriod(w) && matchesDoctor(w)).sort((a,b)=>a.date<b.date?1:-1);
+    const work = labsData.work.filter(w=>w.labId===labId && isCountedWork(w) && inPeriod(w) && matchesDoctor(w)).sort((a,b)=>a.date<b.date?1:-1);
     const doctorText = doctorFilter==='__all__' ? 'كل الأطباء' : (doctorFilter==='__none__' ? 'بدون طبيب محدد' : doctorFilter);
     const total = work.reduce((s,w)=>s+w.total,0);
     const periodText = periodKey==='all' ? 'كل الفترات' : periodLabel(periodKey);
@@ -2082,7 +2752,7 @@ window.__firestoreClinicId = '';
     document.getElementById('patientsCount').textContent = patients.length + ' مريض';
     const box = document.getElementById('patientsList');
     let list = patients
-      .filter(p => !q || norm(p.name).includes(q))
+      .filter(p => !q || norm(p.name).includes(q) || norm(p.medNum).includes(q))
       .map(p=>{
         const pEntries = entries.filter(e=>e.patientId===p.id);
         const totalPaid = pEntries.reduce((s,e)=>s+e.paid,0);
@@ -2140,6 +2810,79 @@ window.__firestoreClinicId = '';
     });
   }
   document.getElementById('patientSearch').addEventListener('input', renderPatients);
+
+  // ---------- Merge duplicate / similar patients ----------
+  function dupIgnoredKey(){ return `dz-${clinicCode}-dupIgnored`; }
+  function getDupIgnored(){ try{ return JSON.parse(localStorage.getItem(dupIgnoredKey())||'[]'); }catch(e){ return []; } }
+  function findDuplicatePairs(){
+    const ignored = new Set(getDupIgnored());
+    const pairs = new Map();
+    const add = (a,b,why,sim)=>{
+      if(a.id===b.id) return;
+      const k = a.id<b.id ? a.id+'|'+b.id : b.id+'|'+a.id;
+      if(ignored.has(k)) return;
+      const ex = pairs.get(k);
+      if(!ex || why==='med') pairs.set(k, { key:k, a, b, why: ex&&ex.why==='med'?'med':why, sim });
+    };
+    const idx = {};
+    patients.forEach(p=>{ normName(p.name).split(' ').filter(t=>t.length>=3).forEach(t=>{ (idx[t]=idx[t]||[]).push(p); }); });
+    Object.values(idx).forEach(list=>{
+      if(list.length>60) return;
+      for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++){
+        const s = nameSimilarity(list[i].name, list[j].name);
+        if(s>=0.85) add(list[i], list[j], 'name', s);
+      }
+    });
+    const byMed = {};
+    patients.forEach(p=>{ if(p.medNum){ const k=norm(p.medNum); (byMed[k]=byMed[k]||[]).push(p); } });
+    Object.values(byMed).forEach(list=>{ for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++) add(list[i], list[j], 'med', 1); });
+    return Array.from(pairs.values()).sort((x,y)=> (y.why==='med')-(x.why==='med') || y.sim-x.sim);
+  }
+  function renderDupPanel(){
+    const box = document.getElementById('dupPanel');
+    const pairs = findDuplicatePairs();
+    if(!pairs.length){ box.innerHTML = '<div class="empty-note">مفيش أسماء متشابهة أو أرقام طبية مكررة 👍</div>'; return; }
+    const info = p => `${escapeHtml(p.name)}<br><span class="stat-sub">${p.medNum?('رقم طبي '+escapeHtml(p.medNum)+' · '):''}${entries.filter(e=>e.patientId===p.id).length} إيصال</span>`;
+    box.innerHTML = `<div class="stat-sub" style="margin-bottom:8px;">${pairs.length} حالة محتاجة مراجعة. الدمج بينقل كل إيصالات وخطط المريض المحذوف للمريض اللي بتختاره.</div>` + pairs.slice(0,30).map(x=>`
+      <div class="approval-card">
+        <div class="stat-sub">${x.why==='med'?'⚠️ نفس الرقم الطبي':'أسماء متشابهة ('+Math.round(x.sim*100)+'٪)'}</div>
+        <div class="row2" style="margin:8px 0;"><div>${info(x.a)}</div><div>${info(x.b)}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn-mini gold dup-merge" data-keep="${x.a.id}" data-drop="${x.b.id}">دمج الثاني في الأول</button>
+          <button class="btn-mini gold dup-merge" data-keep="${x.b.id}" data-drop="${x.a.id}">دمج الأول في الثاني</button>
+          <button class="btn-mini dup-ignore" data-key="${x.key}">مش نفس الشخص</button>
+        </div>
+      </div>`).join('') + (pairs.length>30?`<div class="stat-sub">معروض أول 30 حالة</div>`:'');
+    box.querySelectorAll('.dup-merge').forEach(b=>b.addEventListener('click', ()=>mergePatients(b.dataset.keep, b.dataset.drop)));
+    box.querySelectorAll('.dup-ignore').forEach(b=>b.addEventListener('click', ()=>{
+      const ig = getDupIgnored(); ig.push(b.dataset.key);
+      try{ localStorage.setItem(dupIgnoredKey(), JSON.stringify(ig)); }catch(e){}
+      renderDupPanel();
+    }));
+  }
+  async function mergePatients(keepId, dropId){
+    const keep = patients.find(p=>p.id===keepId), drop = patients.find(p=>p.id===dropId);
+    if(!keep || !drop) return;
+    const nKeep = entries.filter(e=>e.patientId===keep.id).length, nDrop = entries.filter(e=>e.patientId===drop.id).length;
+    let msg = `هتدمج "${drop.name}" (${nDrop} إيصال) داخل "${keep.name}" (${nKeep} إيصال). الاسم "${drop.name}" هيتحذف وكل إيصالاته هتتنقل. تكمل؟`;
+    if(keep.medNum && drop.medNum && norm(keep.medNum)!==norm(drop.medNum)) msg += `\n\nتنبيه: الرقم الطبي هيفضل ${keep.medNum} (بدل ${drop.medNum}).`;
+    if(!confirm(msg)) return;
+    const finalMed = keep.medNum || drop.medNum || '';
+    entries.forEach(e=>{
+      if(e.patientId===drop.id){ e.patientId = keep.id; e.patient = keep.name; e.medNum = finalMed || e.medNum || ''; }
+      else if(e.patientId===keep.id && finalMed && !e.medNum){ e.medNum = finalMed; }
+    });
+    treatmentPlans.forEach(pl=>{ if(pl.patientId===drop.id){ pl.patientId = keep.id; pl.patientName = keep.name; } });
+    keep.medNum = finalMed;
+    patients = patients.filter(p=>p.id!==drop.id);
+    await saveEntries(); await savePatients(); await saveTreatmentPlans();
+    const who = currentUser ? currentUser.name : '—';
+    logAction(`دمج مريض "${drop.name}" في "${keep.name}" (${nDrop} إيصال)`);
+    notifyManagers(`${who} دمج المريض "${drop.name}" في "${keep.name}" (${nDrop} إيصال اتنقلوا)`);
+    toast('تم الدمج');
+    rebuildPatientDatalist(); renderPatients(); renderRecords(); renderDashboard(); renderDupPanel();
+  }
+  document.getElementById('scanDupBtn').addEventListener('click', renderDupPanel);
   document.getElementById('debtOnlyToggle').addEventListener('change', renderPatients);
 
   // ---------- Doctors settings ----------
@@ -2332,7 +3075,7 @@ window.__firestoreClinicId = '';
     toast('تمت إضافة المعمل');
   });
 
-  function labTotal(labId){ return labsData.work.filter(w=>w.labId===labId).reduce((s,w)=>s+w.total,0); }
+  function labTotal(labId){ return labsData.work.filter(w=>w.labId===labId && isCountedWork(w)).reduce((s,w)=>s+w.total,0); }
   let editingLabWorkId = {}; // { [labId]: workEntryId } — تعديل صف شغل معمل
   function resetLabWorkForm(lid){
     delete editingLabWorkId[lid];
@@ -2356,7 +3099,7 @@ window.__firestoreClinicId = '';
   }
 
   function renderLabs(){
-    document.getElementById('labsCount').textContent = labsData.labs.length + ' معمل · ' + labsData.work.length + ' حالة';
+    document.getElementById('labsCount').textContent = labsData.labs.length + ' معمل · ' + labsData.work.filter(isCountedWork).length + ' حالة' + (pendingLabCount() ? (' · ⏳ ' + pendingLabCount() + ' بانتظار الاعتماد') : '');
     const box = document.getElementById('labsList');
     box.innerHTML = '';
     if(!labsData.labs.length){ box.innerHTML = '<div class="empty-note">لا يوجد معامل مضافة بعد</div>'; return; }
@@ -2364,7 +3107,8 @@ window.__firestoreClinicId = '';
     labsData.labs.forEach(lab=>{
       const isOpen = expandedLabs.has(lab.id);
       const items = labsData.items.filter(it=>it.labId===lab.id);
-      const work = labsData.work.filter(w=>w.labId===lab.id).sort((a,b)=>a.date<b.date?1:-1);
+      const work = labsData.work.filter(w=>w.labId===lab.id && isCountedWork(w)).sort((a,b)=>a.date<b.date?1:-1);
+      const pendingWork = labsData.work.filter(w=>w.labId===lab.id && w.approval==='pending');
       const total = labTotal(lab.id);
 
       const card = document.createElement('div');
@@ -2402,6 +3146,16 @@ window.__firestoreClinicId = '';
           <div class="stat-sub" style="margin-top:8px;">أو استورد قائمة أسعار كاملة من ملف Excel (عمودين: اسم الصنف والسعر)</div>
           <input type="file" class="lab-price-import" data-lid="${lab.id}" accept=".xlsx,.xls">
 
+          ${pendingWork.length ? `
+            <h3 class="sub-title" style="color:var(--rose);">⏳ أعمال بانتظار اعتمادك (${pendingWork.length})</h3>
+            ${pendingWork.map(w=>`
+              <div class="audit-item"><div class="a-top"><span class="a-user">${escapeHtml(w.patient||'—')}</span><span>${escapeHtml(w.date||'')}</span></div>
+                ${escapeHtml(w.itemName||'')} × ${w.qty}${w.doctor?(' · د. '+escapeHtml(w.doctor)):''}${w.notes?(' · '+escapeHtml(w.notes)):''}<span class="stat-sub"> · من ${escapeHtml(w.createdBy||'المعمل')}</span>
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                  <button class="btn-mini gold lab-approve" data-id="${w.id}">✓ اعتماد</button>
+                  <button class="btn-mini lab-reject" data-id="${w.id}">✕ رفض</button>
+                </div></div>`).join('')}
+            <button class="btn-mini gold lab-approve-all" data-lid="${lab.id}" style="width:100%;margin-bottom:10px;">اعتماد الكل</button>` : ''}
           <h3 class="sub-title">سجل شغل المعمل</h3>
           <div class="row3">
             <div class="field" style="margin-bottom:8px;"><input type="date" class="lab-work-date" data-lid="${lab.id}" value="${new Date().toISOString().slice(0,10)}"></div>
@@ -2444,6 +3198,16 @@ window.__firestoreClinicId = '';
             </select>
           </div>
           <button class="btn-mini gold print-lab-invoice" data-lid="${lab.id}" style="width:100%;margin-top:8px;">🖨 طباعة فاتورة المعمل</button>
+          <div class="row2" style="margin-top:8px;">
+            <button class="btn-mini lab-import-work" data-lid="${lab.id}">📥 استيراد أعمال من Excel</button>
+            <button class="btn-mini lab-import-invoice" data-lid="${lab.id}">🧾 مطابقة فاتورة المعمل</button>
+          </div>
+          ${(labsData.invoices||[]).filter(inv=>inv.labId===lab.id).length ? `
+            <h3 class="sub-title">فواتير معتمدة</h3>
+            ${(labsData.invoices||[]).filter(inv=>inv.labId===lab.id).map(inv=>`
+              <div class="audit-item"><div class="a-top"><span class="a-user">${fmt(inv.total)} ج.م</span><span>${escapeHtml((inv.importedAt||'').slice(0,10))} · ${escapeHtml(inv.importedBy||'')}</span></div>
+              مطابق ${inv.counts.matched} · فرق سعر ${inv.counts.diff} · غير مسجل ${inv.counts.unmatched}${inv.counts.added?(' (أضفنا '+inv.counts.added+')'):''} · ناقص من الفاتورة ${inv.counts.missing}
+              <button class="row-del lab-invoice-del" data-id="${inv.id}" style="float:left;">✕</button></div>`).join('')}` : ''}
 
           <h3 class="sub-title">مرفقات (فواتير / قوائم أسعار)</h3>
           <div class="stat-sub" style="margin-bottom:4px;">ارفع صورة أو PDF لفاتورة المعمل أو قائمة أسعاره عشان تكون محفوظة عندك (حد أقصى تقريبًا 1.5 ميجا للملف)</div>
@@ -2613,6 +3377,37 @@ window.__firestoreClinicId = '';
     box.querySelectorAll('.cancel-lab-work-edit').forEach(btn=>{
       btn.addEventListener('click', ()=> resetLabWorkForm(btn.dataset.lid));
     });
+    box.querySelectorAll('.lab-approve').forEach(b=>b.addEventListener('click', async ()=>{
+      const w = labsData.work.find(x=>x.id===b.dataset.id); if(!w) return;
+      if(!(await approveLabWork(w))) return;
+      await saveLabs(); logAction(`اعتماد عمل معمل: ${w.patient} · ${w.itemName}`);
+      renderLabs(); renderDashboard();
+    }));
+    box.querySelectorAll('.lab-approve-all').forEach(b=>b.addEventListener('click', async ()=>{
+      const list = labsData.work.filter(w=>w.labId===b.dataset.lid && w.approval==='pending');
+      let n = 0; for(const w of list){ if(await approveLabWork(w)) n++; }
+      if(n){ await saveLabs(); logAction(`اعتماد ${n} عمل معمل`); toast(`تم اعتماد ${n} عمل`); }
+      renderLabs(); renderDashboard();
+    }));
+    box.querySelectorAll('.lab-reject').forEach(b=>b.addEventListener('click', async ()=>{
+      const w = labsData.work.find(x=>x.id===b.dataset.id); if(!w) return;
+      const reason = prompt('سبب الرفض (اختياري):', '');
+      if(reason===null) return;
+      w.approval = 'rejected'; w.rejectReason = reason.trim(); w.rejectedBy = currentUser?currentUser.name:'—'; w.rejectedAt = new Date().toISOString();
+      await saveLabs(); logAction(`رفض عمل معمل: ${w.patient} · ${w.itemName}`);
+      renderLabs();
+    }));
+    box.querySelectorAll('.lab-import-work').forEach(b=>b.addEventListener('click', ()=>openLabImport(b.dataset.lid,'work')));
+    box.querySelectorAll('.lab-import-invoice').forEach(b=>b.addEventListener('click', ()=>openLabImport(b.dataset.lid,'invoice')));
+    box.querySelectorAll('.lab-invoice-del').forEach(b=>b.addEventListener('click', async ()=>{
+      const inv = (labsData.invoices||[]).find(v=>v.id===b.dataset.id); if(!inv) return;
+      if(!confirm('تأكيد حذف سجل الفاتورة دي؟ الأعمال المرتبطة بيها هتفضل موجودة وتتفك عن الفاتورة.')) return;
+      labsData.invoices = labsData.invoices.filter(v=>v.id!==inv.id);
+      labsData.work.forEach(w=>{ if(w.invoiceId===inv.id) delete w.invoiceId; });
+      await saveLabs();
+      logAction('حذف سجل فاتورة معمل');
+      renderLabs();
+    }));
     box.querySelectorAll('.print-lab-invoice').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const lid = btn.dataset.lid;
@@ -2752,16 +3547,53 @@ window.__firestoreClinicId = '';
   }
 
   // ---------- Inventory ----------
+  const INV_DEFAULT_UNITS = ['Piece','Box','Pack','Bottle','Vial','Set','Carton'];
   let editingInvId = null;
+  const invSelected = new Set();
+  let invImportRaw = null;      // {headers:[], rows:[[]]}
+  let invImportParsed = null;   // {rows:[], sig:''}
+
+  function canManageInventory(){ return currentUser && ['manager','inventory'].includes(currentUser.role); }
+  function itemStockValue(item){ return (item.qty||0) * (item.unitPrice||0); }
+  function invItemLabel(x){ return (x.code ? x.code + ' — ' : '') + x.name; }
+  function invFindItem(text){
+    const t = norm(text); if(!t) return null;
+    return inventoryItems.find(x=>norm(invItemLabel(x))===t)
+        || inventoryItems.find(x=>x.code && norm(x.code)===t)
+        || inventoryItems.find(x=>norm(x.name)===t) || null;
+  }
+  function invInPeriod(date, key){
+    if(!key || key==='all') return true;
+    if(key.startsWith('year:')) return periodKeyForDate(date).startsWith(key.slice(5)+'-');
+    return periodKeyForDate(date)===key;
+  }
+  function invQtyText(x){
+    const f = Number(x.factor)||1;
+    let s = `${fmt(x.qty)} ${escapeHtml(x.unit||'')}`;
+    if(x.purchaseUnit && f>1) s += ` (≈ ${(x.qty/f).toFixed(1)} ${escapeHtml(x.purchaseUnit)})`;
+    return s;
+  }
+
+  function refreshInvDatalists(){
+    document.getElementById('invItemsList').innerHTML = inventoryItems.map(x=>`<option value="${escapeHtml(invItemLabel(x))}"></option>`).join('');
+    const units = new Set(INV_DEFAULT_UNITS);
+    inventoryItems.forEach(x=>{ if(x.unit) units.add(x.unit); if(x.purchaseUnit) units.add(x.purchaseUnit); });
+    document.getElementById('invUnitsList').innerHTML = Array.from(units).map(u=>`<option value="${escapeHtml(u)}"></option>`).join('');
+    const cats = Array.from(new Set(inventoryItems.map(x=>x.category).filter(Boolean)));
+    document.getElementById('invCatList').innerHTML = cats.map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');
+    const sel = document.getElementById('invFilterCat'); const prev = sel.value;
+    sel.innerHTML = '<option value="">كل التصنيفات</option>' + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    sel.value = cats.includes(prev) ? prev : '';
+    const ps = document.getElementById('invMovePeriod'); const pp = ps.value || 'all';
+    ps.innerHTML = '<option value="all">كل الفترات</option>' + buildPeriodOptionsHtml();
+    ps.value = pp;
+  }
+
+  // ----- item form -----
+  const INV_FIELDS = ['invName','invCode','invCategory','invQty','invUnit','invPurchaseUnit','invFactor','invMinQty','invSupplier','invUnitPrice','invSalePrice','invNotes'];
   function resetInvForm(){
-    document.getElementById('invName').value = '';
-    document.getElementById('invCode').value = '';
-    document.getElementById('invQty').value = '';
-    document.getElementById('invUnit').value = '';
-    document.getElementById('invMinQty').value = '';
-    document.getElementById('invSupplier').value = '';
-    document.getElementById('invUnitPrice').value = '';
-    document.getElementById('invNotes').value = '';
+    INV_FIELDS.forEach(id=>{ document.getElementById(id).value = ''; });
+    document.getElementById('invQty').disabled = false;
     editingInvId = null;
     document.getElementById('invEditBanner').style.display = 'none';
     document.getElementById('invFormTitle').textContent = 'إضافة صنف جديد';
@@ -2770,37 +3602,98 @@ window.__firestoreClinicId = '';
   document.getElementById('cancelInvEditBtn').addEventListener('click', resetInvForm);
 
   document.getElementById('addInvBtn').addEventListener('click', async ()=>{
-    const name = document.getElementById('invName').value.trim();
-    const code = document.getElementById('invCode').value.trim();
-    const qty = parseFloat(document.getElementById('invQty').value)||0;
-    const unit = document.getElementById('invUnit').value.trim();
-    const minQty = parseFloat(document.getElementById('invMinQty').value)||0;
-    const supplier = document.getElementById('invSupplier').value.trim();
-    const unitPrice = parseFloat(document.getElementById('invUnitPrice').value)||0;
-    const notes = document.getElementById('invNotes').value.trim();
+    const v = id => document.getElementById(id).value.trim();
+    const n = id => parseFloat(document.getElementById(id).value)||0;
+    const name = v('invName'), code = v('invCode');
     if(!name){ toast('اكتب اسم الصنف'); return; }
+    if(code && inventoryItems.some(x=>x.id!==editingInvId && x.code && norm(x.code)===norm(code))){ toast('الكود ده مستخدم لصنف تاني'); return; }
+    if(inventoryItems.some(x=>x.id!==editingInvId && norm(x.name)===norm(name))){ toast('فيه صنف بنفس الاسم'); return; }
+    const factor = n('invFactor')>0 ? n('invFactor') : 1;
+    const fields = {
+      name, code, category: v('invCategory'), unit: v('invUnit'), purchaseUnit: v('invPurchaseUnit'), factor,
+      minQty: n('invMinQty'), supplier: v('invSupplier'), unitPrice: n('invUnitPrice'), salePrice: n('invSalePrice'), notes: v('invNotes')
+    };
     if(editingInvId){
       const idx = inventoryItems.findIndex(x=>x.id===editingInvId);
-      if(idx>-1) inventoryItems[idx] = Object.assign({}, inventoryItems[idx], { name, code, unit, minQty, supplier, unitPrice, notes });
+      if(idx>-1) inventoryItems[idx] = Object.assign({}, inventoryItems[idx], fields, { editedBy: currentUser?currentUser.name:'—', editedAt: new Date().toISOString() });
       toast('تم تعديل الصنف');
       logAction(`تعديل صنف مخزن: ${name}`);
     } else {
-      inventoryItems.unshift({ id: genId(), name, code, qty, unit, supplier, unitPrice, addedDate: new Date().toISOString().slice(0,10), minQty, notes, addedBy: currentUser?currentUser.name:'—' });
+      const qty = n('invQty');
+      const item = Object.assign({ id: genId(), qty, addedDate: new Date().toISOString().slice(0,10), addedBy: currentUser?currentUser.name:'—' }, fields);
+      inventoryItems.unshift(item);
+      if(qty>0) inventoryTx.unshift({ id: genId(), itemId: item.id, type:'in', qty, date: item.addedDate, note:'رصيد افتتاحي', recordedBy: item.addedBy });
       toast('تم إضافة الصنف');
       logAction(`إضافة صنف مخزن: ${name}`);
     }
-    await saveInventoryItems();
+    await saveInventoryItems(); await saveInventoryTx();
     resetInvForm();
     renderInventory();
   });
 
-  function canManageInventory(){ return currentUser && ['manager','inventory'].includes(currentUser.role); }
+  // ----- stock movement form -----
+  document.getElementById('mvDate').value = new Date().toISOString().slice(0,10);
+  function refreshMvUnitOptions(){
+    const item = invFindItem(document.getElementById('mvItem').value);
+    const sel = document.getElementById('mvUnit');
+    const info = document.getElementById('mvItemInfo');
+    if(!item){ sel.innerHTML = '<option value="base">الوحدة</option>'; info.textContent = document.getElementById('mvItem').value.trim() ? '⚠️ الصنف ده مش مسجل — اختار من القائمة' : ''; return; }
+    const f = Number(item.factor)||1;
+    let opts = `<option value="base">${escapeHtml(item.unit||'وحدة')}</option>`;
+    if(item.purchaseUnit && f>1) opts += `<option value="purchase">${escapeHtml(item.purchaseUnit)} (= ${f} ${escapeHtml(item.unit||'وحدة')})</option>`;
+    sel.innerHTML = opts;
+    info.textContent = `الرصيد الحالي: ${fmt(item.qty)} ${item.unit||''}`;
+  }
+  document.getElementById('mvItem').addEventListener('input', refreshMvUnitOptions);
+  document.getElementById('mvAddBtn').addEventListener('click', async ()=>{
+    const item = invFindItem(document.getElementById('mvItem').value);
+    if(!item){ toast('اختار صنف مسجل من القائمة'); return; }
+    const type = document.getElementById('mvType').value;
+    const enteredQty = parseFloat(document.getElementById('mvQty').value);
+    if(!enteredQty || enteredQty<=0){ toast('اكتب كمية صحيحة'); return; }
+    const unitSel = document.getElementById('mvUnit').value;
+    const factor = unitSel==='purchase' ? (Number(item.factor)||1) : 1;
+    const qty = enteredQty * factor;
+    if(type==='out' && qty>item.qty+1e-9){ toast('الكمية المتاحة أقل من كده'); return; }
+    item.qty = type==='in' ? item.qty+qty : item.qty-qty;
+    const enteredUnit = unitSel==='purchase' ? item.purchaseUnit : item.unit;
+    inventoryTx.unshift({
+      id: genId(), itemId: item.id, type, qty,
+      enteredQty, enteredUnit: enteredUnit||'',
+      date: document.getElementById('mvDate').value || new Date().toISOString().slice(0,10),
+      note: document.getElementById('mvNote').value.trim(), recordedBy: currentUser?currentUser.name:'—'
+    });
+    await saveInventoryItems(); await saveInventoryTx();
+    logAction(`${type==='in'?'وارد':'منصرف'} مخزن: ${item.name} × ${fmt(qty)}`);
+    toast('تم تسجيل الحركة');
+    document.getElementById('mvQty').value = ''; document.getElementById('mvNote').value = '';
+    refreshMvUnitOptions();
+    renderInventory();
+  });
+  function startMovement(itemId, type){
+    const x = inventoryItems.find(v=>v.id===itemId); if(!x) return;
+    document.getElementById('mvItem').value = invItemLabel(x);
+    document.getElementById('mvType').value = type;
+    refreshMvUnitOptions();
+    document.getElementById('mvQty').focus();
+    document.getElementById('mvItem').scrollIntoView({behavior:'smooth', block:'center'});
+  }
 
-  function itemStockValue(item){ return item.qty * item.unitPrice; }
+  // ----- list / filters -----
+  function invFilteredItems(){
+    const q = norm(document.getElementById('invSearch').value);
+    const cat = document.getElementById('invFilterCat').value;
+    return inventoryItems.filter(x => (!cat || x.category===cat) && (!q || norm(x.name).includes(q) || norm(x.code).includes(q) || norm(x.supplier).includes(q)));
+  }
+  function invReportItems(){
+    const list = invFilteredItems();
+    const picked = list.filter(x=>invSelected.has(x.id));
+    return picked.length ? picked : list;
+  }
 
   function renderInventory(){
-    const q = norm(document.getElementById('invSearch').value);
-    const list = inventoryItems.filter(x => !q || norm(x.name).includes(q) || norm(x.code).includes(q) || norm(x.supplier).includes(q));
+    refreshInvDatalists();
+    const list = invFilteredItems();
     const totalValue = inventoryItems.reduce((s,x)=>s+itemStockValue(x),0);
     const lowStock = inventoryItems.filter(x=>x.minQty>0 && x.qty<=x.minQty);
     document.getElementById('inventoryCount').textContent = inventoryItems.length + ' صنف';
@@ -2808,20 +3701,23 @@ window.__firestoreClinicId = '';
     document.getElementById('inventoryLowCount').textContent = lowStock.length;
     const box = document.getElementById('inventoryList');
     box.innerHTML = '';
-    if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد أصناف مطابقة</div>'; return; }
+    if(!list.length){ box.innerHTML = '<div class="empty-note">لا توجد أصناف مطابقة</div>'; }
     list.forEach(x=>{
       const isLow = x.minQty>0 && x.qty<=x.minQty;
       const card = document.createElement('div');
       card.className = 'inv-card' + (isLow?' low-stock':'');
       card.innerHTML = `
         <div class="inv-top">
-          <div>
-            <div class="inv-name">${escapeHtml(x.name)}${x.code?(' <span style="color:var(--ink-soft);font-weight:400;font-size:11px;">('+escapeHtml(x.code)+')</span>'):''}</div>
-            <div class="inv-meta">${x.supplier?('المورد: '+escapeHtml(x.supplier)+' · '):''}سعر الوحدة ${fmt(x.unitPrice)} ج.م${isLow?' · ⚠️ تحت الحد الأدنى':''}</div>
-            ${x.notes?`<div class="inv-meta">${escapeHtml(x.notes)}</div>`:''}
-          </div>
+          <label style="display:flex;gap:8px;align-items:flex-start;flex:1;cursor:pointer;">
+            <input type="checkbox" class="inv-sel" data-id="${x.id}" ${invSelected.has(x.id)?'checked':''} style="margin-top:4px;">
+            <div>
+              <div class="inv-name">${escapeHtml(x.name)}${x.code?(' <span style="color:var(--ink-soft);font-weight:400;font-size:11px;">('+escapeHtml(x.code)+')</span>'):''}</div>
+              <div class="inv-meta">${x.category?('التصنيف: '+escapeHtml(x.category)+' · '):''}${x.supplier?('المورد: '+escapeHtml(x.supplier)+' · '):''}شراء ${fmt(x.unitPrice)}${x.salePrice?(' · بيع '+fmt(x.salePrice)):''} ج.م${isLow?' · ⚠️ تحت الحد الأدنى':''}</div>
+              ${x.notes?`<div class="inv-meta">${escapeHtml(x.notes)}</div>`:''}
+            </div>
+          </label>
           <div style="text-align:left;">
-            <div class="inv-qty">${x.qty} ${escapeHtml(x.unit||'')}</div>
+            <div class="inv-qty">${invQtyText(x)}</div>
             <div class="inv-meta">القيمة: ${fmt(itemStockValue(x))} ج.م</div>
           </div>
         </div>
@@ -2833,74 +3729,527 @@ window.__firestoreClinicId = '';
       `;
       box.appendChild(card);
     });
-    box.querySelectorAll('.inv-in-btn').forEach(b=>b.addEventListener('click', ()=>promptStockTx(b.dataset.id,'in')));
-    box.querySelectorAll('.inv-out-btn').forEach(b=>b.addEventListener('click', ()=>promptStockTx(b.dataset.id,'out')));
+    box.querySelectorAll('.inv-sel').forEach(c=>c.addEventListener('change', ()=>{ if(c.checked) invSelected.add(c.dataset.id); else invSelected.delete(c.dataset.id); }));
+    box.querySelectorAll('.inv-in-btn').forEach(b=>b.addEventListener('click', ()=>startMovement(b.dataset.id,'in')));
+    box.querySelectorAll('.inv-out-btn').forEach(b=>b.addEventListener('click', ()=>startMovement(b.dataset.id,'out')));
     box.querySelectorAll('.inv-edit-btn').forEach(b=>{
       b.addEventListener('click', ()=>{
-        const x = inventoryItems.find(v=>v.id===b.dataset.id);
-        if(!x) return;
-        document.getElementById('invName').value = x.name;
-        document.getElementById('invCode').value = x.code||'';
-        document.getElementById('invQty').value = x.qty;
+        const x = inventoryItems.find(v=>v.id===b.dataset.id); if(!x) return;
+        const set = (id,val)=>{ document.getElementById(id).value = (val===undefined||val===null) ? '' : val; };
+        set('invName',x.name); set('invCode',x.code); set('invCategory',x.category); set('invQty',x.qty);
         document.getElementById('invQty').disabled = true;
-        document.getElementById('invUnit').value = x.unit||'';
-        document.getElementById('invMinQty').value = x.minQty||'';
-        document.getElementById('invSupplier').value = x.supplier||'';
-        document.getElementById('invUnitPrice').value = x.unitPrice||'';
-        document.getElementById('invNotes').value = x.notes||'';
+        set('invUnit',x.unit); set('invPurchaseUnit',x.purchaseUnit); set('invFactor',(Number(x.factor)||1)>1?x.factor:'');
+        set('invMinQty',x.minQty||''); set('invSupplier',x.supplier); set('invUnitPrice',x.unitPrice||''); set('invSalePrice',x.salePrice||''); set('invNotes',x.notes);
         editingInvId = x.id;
         document.getElementById('invEditBanner').style.display = 'flex';
-        document.getElementById('invFormTitle').textContent = 'تعديل صنف (الكمية تتغيّر من وارد/منصرف بس)';
+        document.getElementById('invFormTitle').textContent = 'تعديل صنف (الكمية تتغيّر من الحركات بس)';
         document.getElementById('addInvBtn').textContent = 'حفظ التعديل';
+        document.getElementById('invName').scrollIntoView({behavior:'smooth', block:'center'});
       });
     });
     box.querySelectorAll('.inv-del-btn').forEach(b=>{
       b.addEventListener('click', async ()=>{
-        const x = inventoryItems.find(v=>v.id===b.dataset.id);
-        if(!x) return;
-        if(!confirm(`تأكيد حذف صنف "${x.name}" نهائيًا؟`)) return;
+        const x = inventoryItems.find(v=>v.id===b.dataset.id); if(!x) return;
+        if(!confirm(`تأكيد حذف صنف "${x.name}" نهائيًا مع كل حركاته؟`)) return;
         inventoryItems = inventoryItems.filter(v=>v.id!==b.dataset.id);
         inventoryTx = inventoryTx.filter(t=>t.itemId!==b.dataset.id);
-        await saveInventoryItems();
-        await saveInventoryTx();
+        invSelected.delete(b.dataset.id);
+        await saveInventoryItems(); await saveInventoryTx();
         logAction(`حذف صنف مخزن: ${x.name}`);
         renderInventory();
       });
     });
+    renderInventoryMoves();
   }
 
-  async function promptStockTx(itemId, type){
-    const item = inventoryItems.find(x=>x.id===itemId);
-    if(!item) return;
-    const qtyStr = prompt(type==='in' ? `كمية الوارد (${item.unit||''}):` : `كمية المنصرف (${item.unit||''}):`, '1');
-    if(qtyStr===null) return;
-    const qty = parseFloat(qtyStr);
-    if(!qty || qty<=0){ toast('اكتب كمية صحيحة'); return; }
-    if(type==='out' && qty>item.qty){ toast('الكمية المتاحة أقل من كده'); return; }
-    const note = prompt('ملاحظة (اختياري):', '') || '';
-    item.qty = type==='in' ? item.qty+qty : item.qty-qty;
-    inventoryTx.unshift({ id: genId(), itemId, type, qty, date: new Date().toISOString().slice(0,10), note, recordedBy: currentUser?currentUser.name:'—' });
-    await saveInventoryItems();
-    await saveInventoryTx();
-    logAction(`${type==='in'?'وارد':'منصرف'} مخزن: ${item.name} × ${qty}`);
-    renderInventory();
+  function invFilteredMoves(){
+    const type = document.getElementById('invMoveType').value;
+    const period = document.getElementById('invMovePeriod').value || 'all';
+    const ids = new Set(invReportItems().map(x=>x.id));
+    return inventoryTx.filter(t => ids.has(t.itemId) && (!type || t.type===type) && invInPeriod(t.date, period))
+                      .sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
   }
-  document.getElementById('invSearch').addEventListener('input', renderInventory);
+  function renderInventoryMoves(){
+    const moves = invFilteredMoves();
+    const byId = {}; inventoryItems.forEach(x=>byId[x.id]=x);
+    const inQ = moves.filter(t=>t.type==='in').length, outQ = moves.filter(t=>t.type==='out').length;
+    document.getElementById('invMoveSummary').textContent = `${moves.length} حركة · وارد ${inQ} · منصرف ${outQ}`;
+    const box = document.getElementById('inventoryMovesList');
+    if(!moves.length){ box.innerHTML = '<div class="empty-note">لا توجد حركات مطابقة</div>'; return; }
+    box.innerHTML = moves.slice(0,100).map(t=>{
+      const it = byId[t.itemId];
+      return `<div class="audit-item"><div class="a-top"><span class="a-user">${t.type==='in'?'⬆ وارد':'⬇ منصرف'} — ${escapeHtml(it?it.name:'—')}</span><span>${escapeHtml(t.date)}</span></div>${fmt(t.qty)} ${escapeHtml(it?it.unit||'':'')}${(t.enteredUnit && t.enteredQty && t.enteredUnit!==(it&&it.unit))?(' ('+fmt(t.enteredQty)+' '+escapeHtml(t.enteredUnit)+')'):''}${t.note?(' · '+escapeHtml(t.note)):''} · ${escapeHtml(t.recordedBy||'')}</div>`;
+    }).join('') + (moves.length>100 ? `<div class="empty-note">معروض آخر 100 حركة من ${moves.length}</div>` : '');
+  }
+  ['invSearch','invFilterCat','invMoveType','invMovePeriod'].forEach(id=>{
+    const el = document.getElementById(id);
+    el.addEventListener(el.tagName==='INPUT'?'input':'change', ()=> renderInventory());
+  });
+
+  // ----- export & print -----
+  document.getElementById('exportInventoryBtn').addEventListener('click', ()=>{
+    if(typeof XLSX==='undefined'){ toast('تعذر تحميل مكتبة Excel'); return; }
+    const items = invReportItems();
+    if(!items.length){ toast('لا توجد أصناف للتصدير'); return; }
+    const period = document.getElementById('invMovePeriod').value || 'all';
+    const bal = items.map(x=>({ 'الكود':x.code||'', 'الصنف':x.name, 'التصنيف':x.category||'', 'الكمية':x.qty, 'وحدة الصرف':x.unit||'', 'وحدة الشراء':x.purchaseUnit||'', 'عامل التحويل':Number(x.factor)||1, 'سعر الشراء':x.unitPrice||0, 'سعر البيع':x.salePrice||0, 'القيمة':itemStockValue(x), 'الحد الأدنى':x.minQty||0, 'المورد':x.supplier||'' }));
+    bal.push({ 'الكود':'', 'الصنف':'الإجمالي', 'التصنيف':'', 'الكمية':'', 'وحدة الصرف':'', 'وحدة الشراء':'', 'عامل التحويل':'', 'سعر الشراء':'', 'سعر البيع':'', 'القيمة': items.reduce((s,x)=>s+itemStockValue(x),0), 'الحد الأدنى':'', 'المورد':'' });
+    const byId = {}; inventoryItems.forEach(x=>byId[x.id]=x);
+    const mv = invFilteredMoves().map(t=>({ 'التاريخ':t.date, 'الصنف':(byId[t.itemId]||{}).name||'', 'الحركة':t.type==='in'?'وارد':'منصرف', 'الكمية (وحدة الصرف)':t.qty, 'المُدخل':t.enteredQty?(t.enteredQty+' '+(t.enteredUnit||'')):'', 'ملاحظة':t.note||'', 'سجّلها':t.recordedBy||'' }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheetWithHeader(bal, period), 'الأرصدة');
+    XLSX.utils.book_append_sheet(wb, sheetWithHeader(mv, period), 'الحركة');
+    XLSX.writeFile(wb, `Dental-Zone-مخزن-${new Date().toISOString().slice(0,10)}.xlsx`);
+    logAction('تصدير تقرير المخزن Excel');
+  });
 
   document.getElementById('printInventoryBtn').addEventListener('click', ()=>{
-    const rows = inventoryItems.map(x=>`
-      <div class="receipt-row"><span>${escapeHtml(x.name)}${x.code?(' ('+escapeHtml(x.code)+')'):''} — ${x.qty} ${escapeHtml(x.unit||'')}</span><b>${fmt(itemStockValue(x))} ج.م</b></div>
+    const items = invReportItems();
+    const rows = items.map(x=>`
+      <div class="receipt-row"><span>${escapeHtml(invItemLabel(x))}${x.category?(' · '+escapeHtml(x.category)):''} — ${fmt(x.qty)} ${escapeHtml(x.unit||'')}</span><b>${fmt(itemStockValue(x))} ج.م</b></div>
     `).join('');
-    const totalValue = inventoryItems.reduce((s,x)=>s+itemStockValue(x),0);
+    const totalValue = items.reduce((s,x)=>s+itemStockValue(x),0);
+    const byId = {}; inventoryItems.forEach(x=>byId[x.id]=x);
+    const moves = invFilteredMoves().slice(0,60);
+    const mrows = moves.map(t=>`
+      <div class="receipt-row"><span>${escapeHtml(t.date)} — ${t.type==='in'?'وارد':'منصرف'} — ${escapeHtml((byId[t.itemId]||{}).name||'')}</span><b>${fmt(t.qty)}</b></div>
+    `).join('');
+    const periodSel = document.getElementById('invMovePeriod').value || 'all';
     document.getElementById('printReceiptContent').innerHTML = `
       ${printHeaderHtml('تقرير المخزون')}
-      ${rows || '<div class="receipt-row"><span>لا توجد أصناف</span></div>'}
+      <div class="receipt-row"><span>فترة الحركة</span><b>${escapeHtml(periodSel==='all'?'كل الفترات':periodLabel(periodSel))}</b></div>
       <div class="receipt-divider"></div>
-      <div class="receipt-row total"><span>قيمة المخزون الإجمالية</span><b>${fmt(totalValue)} ج.م</b></div>
+      ${rows || '<div class="receipt-row"><span>لا توجد أصناف</span></div>'}
+      <div class="receipt-row total"><span>قيمة المخزون</span><b>${fmt(totalValue)} ج.م</b></div>
+      ${mrows ? '<div class="receipt-divider"></div><div class="receipt-sub">حركة المخزن</div>'+mrows : ''}
       ${printFooterHtml('تاريخ الطباعة: ' + new Date().toISOString().slice(0,10))}
     `;
     window.print();
   });
+
+  // ----- Excel import -----
+  const INV_IMPORT_FIELDS = [
+    { key:'code', label:'الكود', syn:['code','كود','الكود','رقم الصنف','sku'] },
+    { key:'name', label:'اسم الصنف *', syn:['name','اسم','الصنف','اسم الصنف','item','الاسم'] },
+    { key:'qty', label:'الكمية', syn:['qty','quantity','الكمية','كمية','رصيد','الرصيد'] },
+    { key:'unitPrice', label:'سعر الشراء', syn:['سعر الشراء','شراء','cost','purchase','السعر','price'] },
+    { key:'salePrice', label:'سعر البيع', syn:['سعر البيع','بيع','sale','sell'] },
+    { key:'unit', label:'الوحدة', syn:['unit','الوحدة','وحدة'] },
+    { key:'category', label:'التصنيف', syn:['category','التصنيف','تصنيف','الفئة','فئة'] }
+  ];
+  function invImportReadFile(file){
+    if(typeof XLSX==='undefined'){ toast('تعذر تحميل مكتبة Excel'); return; }
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:''}).filter(r=>r.some(c=>String(c).trim()!==''));
+        if(aoa.length<2){ toast('الملف فاضي أو مفيهوش بيانات'); return; }
+        invImportRaw = { headers: aoa[0].map(h=>String(h).trim()), rows: aoa.slice(1) };
+        const box = document.getElementById('invImportMapFields');
+        box.innerHTML = INV_IMPORT_FIELDS.map(f=>{
+          const guess = invImportRaw.headers.findIndex(h=>f.syn.some(s=>norm(h)===norm(s)) );
+          const opts = '<option value="-1">— بدون —</option>' + invImportRaw.headers.map((h,i)=>`<option value="${i}" ${i===guess?'selected':''}>${escapeHtml(h||('عمود '+(i+1)))}</option>`).join('');
+          return `<div class="row2" style="margin-bottom:6px;align-items:center;"><span style="font-size:12.5px;">${f.label}</span><select class="inv-map" data-key="${f.key}">${opts}</select></div>`;
+        }).join('');
+        document.getElementById('invImportMap').style.display = 'block';
+        document.getElementById('invImportPreview').innerHTML = `<div class="stat-sub">اتقرأ ${invImportRaw.rows.length} صف. راجع الربط واضغط "معاينة".</div>`;
+        invImportParsed = null;
+      }catch(err){ console.error(err); toast('تعذر قراءة الملف'); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  document.getElementById('invImportFile').addEventListener('change', e=>{ if(e.target.files[0]) invImportReadFile(e.target.files[0]); });
+
+  function invSignature(rows){
+    let s = JSON.stringify(rows.map(r=>[r.data.code,r.data.name,r.data.qty,r.data.unitPrice]));
+    let h = 0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h + s.charCodeAt(i))|0; }
+    return String(h);
+  }
+  document.getElementById('invPreviewBtn').addEventListener('click', ()=>{
+    if(!invImportRaw) return;
+    const map = {}; document.querySelectorAll('.inv-map').forEach(s=>{ map[s.dataset.key] = Number(s.value); });
+    if(map.name<0){ toast('لازم تربط عمود اسم الصنف'); return; }
+    const mode = document.getElementById('invImportMode').value;
+    const get = (r,k)=> map[k]>=0 ? String(r[map[k]]).trim() : '';
+    const seen = new Set();
+    const rows = invImportRaw.rows.map((r,i)=>{
+      const data = { code:get(r,'code'), name:get(r,'name'), qty:get(r,'qty'), unitPrice:get(r,'unitPrice'), salePrice:get(r,'salePrice'), unit:get(r,'unit'), category:get(r,'category') };
+      const errors = [];
+      if(!data.name) errors.push('اسم الصنف فاضي');
+      ['qty','unitPrice','salePrice'].forEach(k=>{ if(data[k]!=='' && (isNaN(Number(data[k])) || Number(data[k])<0)) errors.push('قيمة غير صحيحة في '+INV_IMPORT_FIELDS.find(f=>f.key===k).label); });
+      const key = data.code ? 'c:'+norm(data.code) : 'n:'+norm(data.name);
+      if(data.name){ if(seen.has(key)) errors.push('مكرر داخل الملف'); seen.add(key); }
+      const existing = data.name ? (inventoryItems.find(x=> data.code && x.code && norm(x.code)===norm(data.code)) || inventoryItems.find(x=>norm(x.name)===norm(data.name))) : null;
+      let status = errors.length ? 'error' : (existing ? (mode==='update'?'update':'skip') : 'new');
+      return { line:i+2, data, errors, status, existingId: existing?existing.id:null };
+    });
+    invImportParsed = { rows, sig: invSignature(rows) };
+    const cnt = s=>rows.filter(r=>r.status===s).length;
+    const bad = cnt('error');
+    const labels = { new:'جديد', update:'تحديث', skip:'تخطي', error:'خطأ' };
+    document.getElementById('invImportPreview').innerHTML = `
+      <div class="stat-sub" style="margin:10px 0;">صحيح: <b>${rows.length-bad}</b> (جديد ${cnt('new')} · تحديث ${cnt('update')} · تخطي ${cnt('skip')}) — خاطئ: <b style="color:var(--rose);">${bad}</b></div>
+      <div style="overflow-x:auto;"><table class="mini-table"><thead><tr><th>صف</th><th>الصنف</th><th>الكمية</th><th>الحالة</th></tr></thead><tbody>
+      ${rows.slice(0,40).map(r=>`<tr><td>${r.line}</td><td>${escapeHtml(r.data.name)}</td><td>${escapeHtml(String(r.data.qty))}</td><td>${labels[r.status]}${r.errors.length?(' — '+escapeHtml(r.errors.join('، '))):''}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${rows.length>40?`<div class="stat-sub">معروض أول 40 صف من ${rows.length}</div>`:''}
+      <div class="row2" style="margin-top:10px;">
+        ${bad?'<button class="btn-mini" id="invErrReportBtn">تحميل تقرير الأخطاء</button>':'<span></span>'}
+        <button class="btn-mini gold" id="invConfirmImportBtn" ${(rows.length-bad)?'':'disabled'}>اعتماد الاستيراد</button>
+      </div>`;
+    const eb = document.getElementById('invErrReportBtn');
+    if(eb) eb.addEventListener('click', ()=>{
+      const errRows = rows.filter(r=>r.status==='error').map(r=>({ 'رقم الصف':r.line, 'الكود':r.data.code, 'الصنف':r.data.name, 'الكمية':r.data.qty, 'الخطأ':r.errors.join('، ') }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(errRows), 'الأخطاء');
+      XLSX.writeFile(wb, 'Dental-Zone-أخطاء-استيراد-المخزن.xlsx');
+    });
+    document.getElementById('invConfirmImportBtn').addEventListener('click', confirmInvImport);
+  });
+
+  async function confirmInvImport(){
+    if(!invImportParsed) return;
+    const sigKey = `dz-${clinicCode}-invImports`;
+    let sigs = []; try{ sigs = JSON.parse(localStorage.getItem(sigKey)||'[]'); }catch(e){ sigs = []; }
+    if(sigs.includes(invImportParsed.sig) && !confirm('البيانات دي شبه اتستوردت قبل كده. تكمل الاستيراد برضه؟')) return;
+    const who = currentUser ? currentUser.name : '—';
+    const today = new Date().toISOString().slice(0,10);
+    let added=0, updated=0;
+    invImportParsed.rows.forEach(r=>{
+      const d = r.data;
+      if(r.status==='new'){
+        const qty = d.qty!=='' ? Number(d.qty) : 0;
+        const item = { id: genId(), name:d.name, code:d.code, category:d.category, qty, unit:d.unit, purchaseUnit:'', factor:1, minQty:0, supplier:'', unitPrice:Number(d.unitPrice)||0, salePrice:Number(d.salePrice)||0, notes:'', addedDate:today, addedBy:who };
+        inventoryItems.unshift(item);
+        if(qty>0) inventoryTx.unshift({ id: genId(), itemId:item.id, type:'in', qty, date:today, note:'استيراد Excel', recordedBy:who });
+        added++;
+      } else if(r.status==='update'){
+        const it = inventoryItems.find(x=>x.id===r.existingId); if(!it) return;
+        if(d.code) it.code = d.code;
+        if(d.category) it.category = d.category;
+        if(d.unit) it.unit = d.unit;
+        if(d.unitPrice!=='') it.unitPrice = Number(d.unitPrice);
+        if(d.salePrice!=='') it.salePrice = Number(d.salePrice);
+        if(d.qty!==''){
+          const diff = Number(d.qty) - it.qty;
+          if(Math.abs(diff)>1e-9){
+            inventoryTx.unshift({ id: genId(), itemId:it.id, type: diff>0?'in':'out', qty: Math.abs(diff), date:today, note:'تسوية من استيراد Excel', recordedBy:who });
+            it.qty = Number(d.qty);
+          }
+        }
+        it.editedBy = who; it.editedAt = new Date().toISOString();
+        updated++;
+      }
+    });
+    await saveInventoryItems(); await saveInventoryTx();
+    sigs.push(invImportParsed.sig); try{ localStorage.setItem(sigKey, JSON.stringify(sigs.slice(-30))); }catch(e){}
+    logAction(`استيراد مخزن من Excel: ${added} جديد، ${updated} تحديث`);
+    toast(`تم الاستيراد: ${added} جديد، ${updated} تحديث`);
+    invImportParsed = null; invImportRaw = null;
+    document.getElementById('invImportFile').value = '';
+    document.getElementById('invImportMap').style.display = 'none';
+    document.getElementById('invImportPreview').innerHTML = `<div class="stat-sub">تم الاستيراد: ${added} صنف جديد، ${updated} تحديث.</div>`;
+    renderInventory();
+  }
+
+  // ---------- Lab Excel imports (work log + lab invoice reconciliation) ----------
+  const labImport = { lid:null, mode:null, raw:null, parsed:null, fileName:'' };
+  function closeLabImport(){
+    document.getElementById('labImportModal').classList.remove('open');
+    labImport.raw = null; labImport.parsed = null;
+  }
+  document.getElementById('closeLabImportBtn').addEventListener('click', closeLabImport);
+
+  function toEnDigits(s){
+    return String(s).replace(/[٠-٩]/g, d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g, d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+  }
+  function parseNumCell(v){
+    if(v===''||v===null||v===undefined) return null;
+    if(typeof v==='number') return v;
+    const n = Number(toEnDigits(v).replace(/[,٬\s]/g,'').replace('٫','.'));
+    return isNaN(n) ? NaN : n;
+  }
+  function makeIsoDate(y,mo,d){
+    y=+y; mo=+mo; d=+d;
+    if(mo<1||mo>12||d<1||d>31) return '';
+    return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+  function parseDateCell(v){
+    if(v===''||v===null||v===undefined) return '';
+    if(typeof v==='number'){
+      if(v>20000 && v<80000) return new Date(Math.round((v-25569)*86400000)).toISOString().slice(0,10);
+      return '';
+    }
+    const s = toEnDigits(v).trim();
+    let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+    if(m) return makeIsoDate(m[1],m[2],m[3]);
+    m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+    if(m) return makeIsoDate(m[3],m[2],m[1]);
+    return '';
+  }
+
+  const LAB_WORK_FIELDS = [
+    { key:'date', label:'التاريخ *', syn:['date','التاريخ','تاريخ'] },
+    { key:'patient', label:'المريض *', syn:['patient','المريض','اسم المريض','الحاله','الحالة'] },
+    { key:'item', label:'الصنف *', syn:['item','الصنف','اسم الصنف','العمل','نوع العمل','البند'] },
+    { key:'qty', label:'العدد', syn:['qty','العدد','الكمية','عدد'] },
+    { key:'discPct', label:'خصم %', syn:['خصم','الخصم','discount','خصم%'] },
+    { key:'doctor', label:'الطبيب', syn:['doctor','الطبيب','دكتور','د.'] },
+    { key:'ref', label:'رقم العملية/الإيصال', syn:['ref','رقم العملية','رقم الايصال','رقم الإيصال','رقم'] }
+  ];
+  const LAB_INV_FIELDS = [
+    { key:'date', label:'التاريخ', syn:['date','التاريخ','تاريخ'] },
+    { key:'patient', label:'المريض *', syn:['patient','المريض','اسم المريض','الحاله','الحالة'] },
+    { key:'item', label:'الصنف *', syn:['item','الصنف','اسم الصنف','العمل','نوع العمل','البند'] },
+    { key:'qty', label:'العدد', syn:['qty','العدد','الكمية','عدد'] },
+    { key:'unitPrice', label:'سعر الوحدة', syn:['سعر','سعر الوحدة','price','unit price'] },
+    { key:'total', label:'الإجمالي', syn:['الإجمالي','الاجمالي','total','القيمة','المبلغ'] },
+    { key:'ref', label:'رقم العملية', syn:['ref','رقم العملية','رقم الايصال','رقم الإيصال','رقم'] }
+  ];
+
+  function openLabImport(lid, mode){
+    const lab = labsData.labs.find(l=>l.id===lid); if(!lab) return;
+    labImport.lid = lid; labImport.mode = mode; labImport.raw = null; labImport.parsed = null;
+    document.getElementById('labImportTitle').textContent = (mode==='work' ? 'استيراد أعمال: ' : 'مطابقة فاتورة: ') + lab.name;
+    document.getElementById('labImportBody').innerHTML = `
+      <div class="stat-sub" style="margin-bottom:8px;">${mode==='work'
+        ? 'ارفع ملف Excel بأعمال المعمل. الصنف لازم يكون موجود في قائمة أسعار المعمل ده، والطبيب (لو موجود) لازم يكون مسجل.'
+        : 'ارفع فاتورة المعمل (Excel). هنطابق بنودها مع الأعمال المسجلة عندنا لنفس المعمل، وتراجع الفروق قبل الاعتماد.'}</div>
+      <div class="field" style="margin-bottom:8px;"><input type="file" id="liFile" accept=".xlsx,.xls,.csv"></div>
+      <div id="liMap"></div>
+      <div id="liPreview"></div>`;
+    document.getElementById('liFile').addEventListener('change', e=>{ if(e.target.files[0]) readLabImportFile(e.target.files[0]); });
+    document.getElementById('labImportModal').classList.add('open');
+  }
+
+  function readLabImportFile(file){
+    if(typeof XLSX==='undefined'){ toast('تعذر تحميل مكتبة Excel'); return; }
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:''}).filter(r=>r.some(c=>String(c).trim()!==''));
+        if(aoa.length<2){ toast('الملف فاضي أو مفيهوش بيانات'); return; }
+        labImport.raw = { headers: aoa[0].map(h=>String(h).trim()), rows: aoa.slice(1) };
+        labImport.fileName = file.name;
+        const fields = labImport.mode==='work' ? LAB_WORK_FIELDS : LAB_INV_FIELDS;
+        document.getElementById('liMap').innerHTML = `
+          <div class="stat-sub" style="margin:6px 0;">اتقرأ ${labImport.raw.rows.length} صف. اربط الأعمدة (* مطلوب):</div>` +
+          fields.map(f=>{
+            const guess = labImport.raw.headers.findIndex(h=>f.syn.some(s=>norm(h)===norm(s)));
+            const opts = '<option value="-1">— بدون —</option>' + labImport.raw.headers.map((h,i)=>`<option value="${i}" ${i===guess?'selected':''}>${escapeHtml(h||('عمود '+(i+1)))}</option>`).join('');
+            return `<div class="row2" style="margin-bottom:6px;align-items:center;"><span style="font-size:12.5px;">${f.label}</span><select class="li-map" data-key="${f.key}">${opts}</select></div>`;
+          }).join('') + (labImport.mode==='work'
+            ? `<div class="field" style="margin:8px 0;"><select id="liDupMode"><option value="skip">الأعمال المكررة: اتخطّاها</option><option value="import">الأعمال المكررة: استوردها برضه</option></select></div>`
+            : `<div class="field" style="margin:8px 0;"><select id="liAddMissing"><option value="no">البنود غير المسجلة: سجّلها في الفاتورة بس</option><option value="yes">البنود غير المسجلة: أضفها كأعمال جديدة للمعمل</option></select></div>`) +
+          `<button class="btn-mini" id="liPreviewBtn" style="width:100%;">معاينة</button>`;
+        document.getElementById('liPreview').innerHTML = '';
+        document.getElementById('liPreviewBtn').addEventListener('click', ()=> labImport.mode==='work' ? previewLabWork() : previewLabInvoice());
+      }catch(err){ console.error(err); toast('تعذر قراءة الملف'); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  function liMapping(){ const m = {}; document.querySelectorAll('.li-map').forEach(s=>{ m[s.dataset.key] = Number(s.value); }); return m; }
+  function liSignature(rows){
+    const s = JSON.stringify(rows);
+    let h = 0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h + s.charCodeAt(i))|0; }
+    return String(h);
+  }
+  function downloadLabErrors(rows, name){
+    const data = rows.filter(r=>r.status==='error'||r.status==='dup').map(r=>({ 'رقم الصف':r.line, 'المريض':r.patient||'', 'الصنف':r.itemName||'', 'التاريخ':r.date||'', 'المشكلة':r.errors.join('، ') }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'المشاكل');
+    XLSX.writeFile(wb, name);
+  }
+
+  // ----- work import -----
+  function previewLabWork(){
+    const raw = labImport.raw; if(!raw) return;
+    const lid = labImport.lid;
+    const map = liMapping();
+    if(map.date<0 || map.patient<0 || map.item<0){ toast('اربط التاريخ والمريض والصنف'); return; }
+    const items = labsData.items.filter(i=>i.labId===lid);
+    const docs = doctorNames();
+    const get = (r,k)=> map[k]>=0 ? r[map[k]] : '';
+    const seen = new Set();
+    const rows = raw.rows.map((r,i)=>{
+      const errors = [];
+      const date = parseDateCell(get(r,'date')); if(!date) errors.push('تاريخ غير صحيح');
+      const patient = String(get(r,'patient')).trim(); if(!patient) errors.push('اسم المريض فاضي');
+      const itemName = String(get(r,'item')).trim();
+      const item = itemName ? (items.find(it=>norm(it.name)===norm(itemName)) || items.find(it=>normName(it.name)===normName(itemName))) : null;
+      if(!itemName) errors.push('الصنف فاضي'); else if(!item) errors.push('الصنف مش في قائمة أسعار المعمل');
+      let qty = parseNumCell(get(r,'qty')); if(qty===null) qty = 1;
+      if(isNaN(qty)||qty<=0) errors.push('عدد غير صحيح');
+      let disc = parseNumCell(get(r,'discPct')); if(disc===null) disc = 0;
+      if(isNaN(disc)||disc<0||disc>100) errors.push('خصم غير صحيح');
+      const doctorRaw = String(get(r,'doctor')).trim();
+      let doctor = '';
+      if(doctorRaw){ doctor = docs.find(n=>normName(n)===normName(doctorRaw)) || ''; if(!doctor) errors.push('الطبيب مش مسجل'); }
+      const ref = String(get(r,'ref')).trim();
+      let status = errors.length ? 'error' : 'new';
+      if(status==='new'){
+        const key = [date, normName(patient), item.id, qty].join('|');
+        if(seen.has(key)){ status='dup'; errors.push('مكرر داخل الملف'); }
+        else if(labsData.work.some(w=>w.labId===lid && w.date===date && normName(w.patient)===normName(patient) && w.itemId===item.id && Number(w.qty)===qty)){ status='dup'; errors.push('مسجل قبل كده'); }
+        seen.add(key);
+      }
+      return { line:i+2, status, errors, date, patient, doctor, item, itemName, qty, disc, ref };
+    });
+    labImport.parsed = { rows, sig: liSignature(rows.map(r=>[r.date,r.patient,r.itemName,r.qty])) };
+    const cnt = s=>rows.filter(r=>r.status===s).length;
+    const labels = { new:'جديد', dup:'مكرر', error:'خطأ' };
+    document.getElementById('liPreview').innerHTML = `
+      <div class="stat-sub" style="margin:10px 0;">صحيح وجديد: <b>${cnt('new')}</b> · مكرر: <b>${cnt('dup')}</b> · خاطئ: <b style="color:var(--rose);">${cnt('error')}</b></div>
+      <div style="overflow-x:auto;"><table class="mini-table"><thead><tr><th>صف</th><th>التاريخ</th><th>المريض</th><th>الصنف</th><th>الحالة</th></tr></thead><tbody>
+      ${rows.slice(0,40).map(r=>`<tr><td>${r.line}</td><td>${escapeHtml(r.date)}</td><td>${escapeHtml(r.patient)}</td><td>${escapeHtml(r.itemName)}</td><td>${labels[r.status]}${r.errors.length?(' — '+escapeHtml(r.errors.join('، '))):''}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${rows.length>40?`<div class="stat-sub">معروض أول 40 صف من ${rows.length}</div>`:''}
+      <div class="row2" style="margin-top:10px;">
+        ${(cnt('error')||cnt('dup'))?'<button class="btn-mini" id="liErrBtn">تحميل تقرير المشاكل</button>':'<span></span>'}
+        <button class="btn-mini gold" id="liConfirmBtn">اعتماد الاستيراد</button>
+      </div>`;
+    const eb = document.getElementById('liErrBtn');
+    if(eb) eb.addEventListener('click', ()=>downloadLabErrors(rows, 'Dental-Zone-مشاكل-استيراد-المعمل.xlsx'));
+    document.getElementById('liConfirmBtn').addEventListener('click', confirmLabWorkImport);
+  }
+  async function confirmLabWorkImport(){
+    const parsed = labImport.parsed; if(!parsed) return;
+    const lid = labImport.lid;
+    const allowDup = document.getElementById('liDupMode') && document.getElementById('liDupMode').value==='import';
+    const toImport = parsed.rows.filter(r=>r.status==='new' || (allowDup && r.status==='dup'));
+    if(!toImport.length){ toast('مفيش صفوف صالحة للاستيراد'); return; }
+    const sigKey = `dz-${clinicCode}-labImports`;
+    let sigs = []; try{ sigs = JSON.parse(localStorage.getItem(sigKey)||'[]'); }catch(e){ sigs = []; }
+    const sig = lid+':'+parsed.sig;
+    if(sigs.includes(sig) && !confirm('الملف ده شبه حاجة اتستوردت قبل كده للمعمل ده. تكمل برضه؟')) return;
+    const who = currentUser ? currentUser.name : '—';
+    const stamp = new Date().toISOString();
+    const batch = genId();
+    toImport.forEach(r=>{
+      labsData.work.push({
+        id: genId(), labId: lid, date: r.date, patient: r.patient, doctor: r.doctor,
+        itemId: r.item.id, itemName: r.item.name, qty: r.qty, unitPrice: r.item.price, discPct: r.disc,
+        total: r.qty*r.item.price*(1-r.disc/100), ref: r.ref, importedBy: who, importedAt: stamp, importBatch: batch
+      });
+    });
+    if(!(await saveLabs())) return;
+    sigs.push(sig); try{ localStorage.setItem(sigKey, JSON.stringify(sigs.slice(-30))); }catch(e){}
+    const lab = labsData.labs.find(l=>l.id===lid);
+    logAction(`استيراد ${toImport.length} عمل من Excel للمعمل ${lab?lab.name:''}`);
+    toast(`تم استيراد ${toImport.length} عمل`);
+    closeLabImport();
+    renderLabs(); renderDashboard();
+  }
+
+  // ----- invoice reconciliation -----
+  function previewLabInvoice(){
+    const raw = labImport.raw; if(!raw) return;
+    const lid = labImport.lid;
+    const map = liMapping();
+    if(map.patient<0 || map.item<0){ toast('اربط المريض والصنف'); return; }
+    if(map.total<0 && map.unitPrice<0){ toast('اربط عمود الإجمالي أو سعر الوحدة'); return; }
+    const get = (r,k)=> map[k]>=0 ? r[map[k]] : '';
+    const pool = labsData.work.filter(w=>w.labId===lid && isCountedWork(w));
+    const used = new Set();
+    const rows = raw.rows.map((r,i)=>{
+      const errors = [];
+      const patient = String(get(r,'patient')).trim(); if(!patient) errors.push('اسم المريض فاضي');
+      const itemName = String(get(r,'item')).trim(); if(!itemName) errors.push('الصنف فاضي');
+      const date = map.date>=0 ? parseDateCell(get(r,'date')) : '';
+      if(map.date>=0 && String(get(r,'date')).trim()!=='' && !date) errors.push('تاريخ غير صحيح');
+      let qty = parseNumCell(get(r,'qty')); if(qty===null) qty = 1;
+      if(isNaN(qty)||qty<=0) errors.push('عدد غير صحيح');
+      const unitPrice = parseNumCell(get(r,'unitPrice'));
+      const totalCell = parseNumCell(get(r,'total'));
+      if((unitPrice!==null && isNaN(unitPrice)) || (totalCell!==null && isNaN(totalCell))) errors.push('رقم غير صحيح في السعر/الإجمالي');
+      let lineTotal = (totalCell!==null && !isNaN(totalCell)) ? totalCell : ((unitPrice!==null && !isNaN(unitPrice) && !isNaN(qty)) ? qty*unitPrice : null);
+      if(lineTotal===null && !errors.length) errors.push('مفيش سعر ولا إجمالي للبند');
+      const ref = String(get(r,'ref')).trim();
+      return { line:i+2, patient, itemName, date, qty, lineTotal, ref, errors, status: errors.length?'error':'', work:null };
+    });
+    rows.forEach(r=>{
+      if(r.status==='error') return;
+      let cands = pool.filter(w=>!used.has(w.id) && normName(w.itemName)===normName(r.itemName) && Number(w.qty)===r.qty && nameSimilarity(w.patient, r.patient)>=0.9);
+      if(r.ref){ const byRef = cands.filter(w=>w.ref && norm(w.ref)===norm(r.ref)); if(byRef.length) cands = byRef; }
+      if(r.date) cands.sort((a,b)=>Math.abs(new Date(a.date)-new Date(r.date)) - Math.abs(new Date(b.date)-new Date(r.date)));
+      if(cands.length){
+        const w = cands[0]; used.add(w.id); r.work = w;
+        if(w.invoiceId) r.status = 'already';
+        else r.status = Math.abs(w.total - r.lineTotal) > 0.01 ? 'diff' : 'matched';
+      } else r.status = 'unmatched';
+    });
+    const dates = rows.map(r=>r.date).filter(Boolean).sort();
+    const minD = dates[0], maxD = dates[dates.length-1];
+    const missing = pool.filter(w=>!used.has(w.id) && !w.invoiceId && (!minD || (w.date>=minD && w.date<=maxD)));
+    const good = rows.filter(r=>r.status!=='error');
+    const invoiceTotal = good.reduce((s,r)=>s+r.lineTotal,0);
+    const matchedRegistered = good.filter(r=>r.work).reduce((s,r)=>s+r.work.total,0);
+    labImport.parsed = { rows, missing, invoiceTotal, sig: liSignature(rows.map(r=>[r.patient,r.itemName,r.qty,r.lineTotal])) };
+    const cnt = s=>rows.filter(r=>r.status===s).length;
+    const labels = { matched:'✅ مطابق', diff:'⚠️ فرق سعر', already:'سبق تفويته', unmatched:'❓ غير مسجل عندنا', error:'❌ خطأ' };
+    document.getElementById('liPreview').innerHTML = `
+      <div class="fin-table" style="margin:10px 0;">
+        <div class="fin-row"><span>إجمالي الفاتورة (البنود الصحيحة)</span><b>${fmt(invoiceTotal)}</b></div>
+        <div class="fin-row"><span>المقابل المسجل عندنا للبنود المطابقة</span><b>${fmt(matchedRegistered)}</b></div>
+        <div class="fin-row total"><span>الفرق</span><b>${fmt(invoiceTotal - matchedRegistered)}</b></div>
+      </div>
+      <div class="stat-sub" style="margin-bottom:8px;">مطابق ${cnt('matched')} · فرق سعر ${cnt('diff')} · سبق تفويته ${cnt('already')} · غير مسجل ${cnt('unmatched')} · خطأ ${cnt('error')} — مسجل عندنا وغير موجود بالفاتورة: ${missing.length}</div>
+      <div style="overflow-x:auto;"><table class="mini-table"><thead><tr><th>صف</th><th>المريض</th><th>الصنف</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>
+      ${rows.slice(0,50).map(r=>`<tr><td>${r.line}</td><td>${escapeHtml(r.patient)}</td><td>${escapeHtml(r.itemName)}</td><td>${r.lineTotal===null?'—':fmt(r.lineTotal)}</td><td>${labels[r.status]}${r.status==='diff'?(' (عندنا '+fmt(r.work.total)+')'):''}${r.errors.length?(' — '+escapeHtml(r.errors.join('، '))):''}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${rows.length>50?`<div class="stat-sub">معروض أول 50 بند من ${rows.length}</div>`:''}
+      ${missing.length?`<div class="stat-sub" style="margin-top:10px;"><b>مسجلة عندنا وغير موجودة بالفاتورة:</b><br>${missing.slice(0,25).map(w=>escapeHtml(w.date+' — '+w.patient+' — '+w.itemName)).join('<br>')}${missing.length>25?'<br>…':''}</div>`:''}
+      <div class="row2" style="margin-top:10px;">
+        ${cnt('error')?'<button class="btn-mini" id="liErrBtn">تحميل تقرير الأخطاء</button>':'<span></span>'}
+        <button class="btn-mini gold" id="liConfirmBtn">اعتماد الفاتورة</button>
+      </div>`;
+    const eb = document.getElementById('liErrBtn');
+    if(eb) eb.addEventListener('click', ()=>downloadLabErrors(rows, 'Dental-Zone-أخطاء-فاتورة-المعمل.xlsx'));
+    document.getElementById('liConfirmBtn').addEventListener('click', confirmLabInvoice);
+  }
+  async function confirmLabInvoice(){
+    const parsed = labImport.parsed; if(!parsed) return;
+    const lid = labImport.lid;
+    const lab = labsData.labs.find(l=>l.id===lid); if(!lab) return;
+    labsData.invoices = labsData.invoices || [];
+    const sig = parsed.sig;
+    if(labsData.invoices.some(inv=>inv.labId===lid && inv.sig===sig) && !confirm('فاتورة بنفس البنود اتعتمدت قبل كده لنفس المعمل. تكمل برضه؟')) return;
+    const addMissing = document.getElementById('liAddMissing') && document.getElementById('liAddMissing').value==='yes';
+    const who = currentUser ? currentUser.name : '—';
+    const stamp = new Date().toISOString();
+    const today = stamp.slice(0,10);
+    const invId = genId();
+    const items = labsData.items.filter(i=>i.labId===lid);
+    let added = 0;
+    parsed.rows.forEach(r=>{
+      if((r.status==='matched'||r.status==='diff') && r.work){ r.work.invoiceId = invId; }
+      else if(r.status==='unmatched' && addMissing){
+        const li = items.find(it=>normName(it.name)===normName(r.itemName));
+        labsData.work.push({
+          id: genId(), labId: lid, date: r.date||today, patient: r.patient, doctor:'',
+          itemId: li?li.id:'', itemName: r.itemName, qty: r.qty, unitPrice: r.lineTotal/r.qty, discPct:0, total: r.lineTotal,
+          ref: r.ref, invoiceId: invId, fromInvoice:true, importedBy: who, importedAt: stamp
+        });
+        added++;
+      }
+    });
+    const cnt = s=>parsed.rows.filter(r=>r.status===s).length;
+    labsData.invoices.unshift({
+      id: invId, labId: lid, importedAt: stamp, importedBy: who, fileName: labImport.fileName, sig,
+      total: parsed.invoiceTotal,
+      counts: { matched:cnt('matched'), diff:cnt('diff'), already:cnt('already'), unmatched:cnt('unmatched'), error:cnt('error'), missing: parsed.missing.length, added },
+      lines: parsed.rows.slice(0,300).map(r=>({ line:r.line, patient:r.patient, item:r.itemName, qty:r.qty, total:r.lineTotal, status:r.status }))
+    });
+    if(!(await saveLabs())) return;
+    logAction(`اعتماد فاتورة المعمل ${lab.name} بإجمالي ${fmt(parsed.invoiceTotal)} ج.م (${cnt('matched')} مطابق، ${cnt('diff')} فرق، ${cnt('unmatched')} غير مسجل)`);
+    toast('تم اعتماد الفاتورة');
+    closeLabImport();
+    renderLabs(); renderDashboard();
+  }
 
   // ---------- Treatment plans ----------
   let currentPlanPatientId = null;
@@ -2929,7 +4278,7 @@ window.__firestoreClinicId = '';
         card.innerHTML = `
           <div class="p-date">${escapeHtml(pl.date)} · د. ${escapeHtml(pl.doctor||'—')}</div>
           <div class="p-diag">${escapeHtml(pl.diagnosis||'بدون تشخيص مسجل')}</div>
-          <div class="p-sum">الإجمالي ${fmt(total)} ج.م · المنفذ ${done}/${pl.procedures.length} إجراء</div>
+          <div class="p-sum">الإجمالي ${fmt(total)} ج.م · المنفذ ${done}/${pl.procedures.length} إجراء${(pl.teeth&&pl.teeth.length)?(' · أسنان '+pl.teeth.filter(x=>x.status==='Completed').length+'/'+pl.teeth.length):''}</div>
         `;
         card.addEventListener('click', ()=> openPlanEditor(pl));
         listArea.appendChild(card);
@@ -2975,6 +4324,9 @@ window.__firestoreClinicId = '';
       </div>
       <div class="field" style="margin-bottom:8px;"><input type="text" id="planDiagnosis" placeholder="التشخيص" value="${escapeHtml(d.diagnosis||'')}"></div>
       <div class="field" style="margin-bottom:8px;"><input type="text" id="planNotes" placeholder="ملاحظات الطبيب" value="${escapeHtml(d.notes||'')}"></div>
+
+      <h3 class="sub-title">مخطط الأسنان</h3>
+      <div id="toothChartArea"></div>
 
       <h3 class="sub-title">الإجراءات العلاجية</h3>
       <div class="row3">
@@ -3056,10 +4408,80 @@ window.__firestoreClinicId = '';
         <div class="fin-row total grand"><span>المتبقي</span><b>${fmt(total-paid)} ج.م</b></div>
         <div class="fin-row"><span>الإجراءات المنفذة</span><b>${done}</b></div>
         <div class="fin-row"><span>الإجراءات المتبقية</span><b>${remain}</b></div>
+        <div class="fin-row"><span>إجراءات الأسنان (مكتمل / الكل)</span><b>${(currentPlanDraft.teeth||[]).filter(x=>x.status==='Completed').length} / ${(currentPlanDraft.teeth||[]).length}</b></div>
       `;
+    }
+    const PLAN_PROCS = ['Examination','Scaling & Polishing','Filling','Root Canal Treatment','Extraction','Crown','Bridge','Implant','Denture','Other'];
+    const TOOTH_STATUS = ['Pending','In Progress','Completed'];
+    const TOOTH_SETS = {
+      adult: { upper:[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28], lower:[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] },
+      primary: { upper:[55,54,53,52,51,61,62,63,64,65], lower:[85,84,83,82,81,71,72,73,74,75] }
+    };
+    let dentition = 'adult', chosenProc = PLAN_PROCS[0], chosenStatus = TOOTH_STATUS[0];
+    const selectedTeeth = new Set();
+    if(!currentPlanDraft.teeth) currentPlanDraft.teeth = [];
+    function toothGridHtml(list){
+      return `<div class="tooth-grid" style="grid-template-columns:repeat(${list.length},1fr);">` + list.map(t=>{
+        const has = currentPlanDraft.teeth.some(x=>x.tooth===t);
+        return `<button type="button" class="tooth-btn ${selectedTeeth.has(t)?'sel':''} ${has?'has-work':''}" data-t="${t}">${t}</button>`;
+      }).join('') + '</div>';
+    }
+    function renderTeeth(){
+      const area = document.getElementById('toothChartArea');
+      const set = TOOTH_SETS[dentition];
+      const items = currentPlanDraft.teeth.slice().sort((a,b)=>a.tooth-b.tooth);
+      area.innerHTML = `
+        <div class="row2" style="margin-bottom:6px;">
+          <button type="button" class="btn-mini ${dentition==='adult'?'gold':''}" id="dentAdultBtn">أسنان دائمة</button>
+          <button type="button" class="btn-mini ${dentition==='primary'?'gold':''}" id="dentPrimaryBtn">أسنان لبنية</button>
+        </div>
+        <div class="jaw-label">الفك العلوي</div>
+        ${toothGridHtml(set.upper)}
+        ${toothGridHtml(set.lower)}
+        <div class="jaw-label">الفك السفلي</div>
+        <div class="stat-sub" style="margin:6px 0;">المحدد: ${selectedTeeth.size ? Array.from(selectedTeeth).sort((a,b)=>a-b).join('، ') : 'لا يوجد — اضغط على الأسنان لتحديدها'}</div>
+        <div class="row2">
+          <select id="toothProcSelect">${PLAN_PROCS.map(p=>`<option ${p===chosenProc?'selected':''}>${p}</option>`).join('')}</select>
+          <select id="toothStatusSelect">${TOOTH_STATUS.map(s=>`<option ${s===chosenStatus?'selected':''}>${s}</option>`).join('')}</select>
+        </div>
+        <button type="button" class="btn-mini" id="addToothWorkBtn" style="width:100%;margin:6px 0;">إضافة الإجراء للأسنان المحددة</button>
+        <div class="plan-sub-list">${items.map(x=>`
+          <div class="plan-sub-item">
+            <span class="psi-main"><b>سن ${x.tooth}</b></span>
+            <select class="status-select tooth-proc-edit" data-id="${x.id}">${PLAN_PROCS.map(p=>`<option ${p===x.procedure?'selected':''}>${p}</option>`).join('')}</select>
+            <select class="status-select tooth-status-edit" data-id="${x.id}">${TOOTH_STATUS.map(s=>`<option ${s===x.status?'selected':''}>${s}</option>`).join('')}</select>
+            <button type="button" class="psi-del tooth-del" data-id="${x.id}">✕</button>
+          </div>`).join('') || '<div class="empty-note">لا توجد إجراءات على الأسنان</div>'}</div>
+      `;
+      document.getElementById('dentAdultBtn').addEventListener('click', ()=>{ dentition='adult'; renderTeeth(); });
+      document.getElementById('dentPrimaryBtn').addEventListener('click', ()=>{ dentition='primary'; renderTeeth(); });
+      area.querySelectorAll('.tooth-btn').forEach(b=>b.addEventListener('click', ()=>{
+        const t = Number(b.dataset.t);
+        if(selectedTeeth.has(t)) selectedTeeth.delete(t); else selectedTeeth.add(t);
+        renderTeeth();
+      }));
+      document.getElementById('toothProcSelect').addEventListener('change', e=>{ chosenProc = e.target.value; });
+      document.getElementById('toothStatusSelect').addEventListener('change', e=>{ chosenStatus = e.target.value; });
+      document.getElementById('addToothWorkBtn').addEventListener('click', ()=>{
+        if(!selectedTeeth.size){ toast('حدد سن أو أكتر الأول'); return; }
+        selectedTeeth.forEach(t=> currentPlanDraft.teeth.push({ id: genId(), tooth:t, procedure:chosenProc, status:chosenStatus }));
+        selectedTeeth.clear();
+        renderTeeth(); refreshSummary();
+      });
+      area.querySelectorAll('.tooth-proc-edit').forEach(s=>s.addEventListener('change', ()=>{
+        const x = currentPlanDraft.teeth.find(v=>v.id===s.dataset.id); if(x) x.procedure = s.value;
+      }));
+      area.querySelectorAll('.tooth-status-edit').forEach(s=>s.addEventListener('change', ()=>{
+        const x = currentPlanDraft.teeth.find(v=>v.id===s.dataset.id); if(x) x.status = s.value; refreshSummary();
+      }));
+      area.querySelectorAll('.tooth-del').forEach(b=>b.addEventListener('click', ()=>{
+        currentPlanDraft.teeth = currentPlanDraft.teeth.filter(v=>v.id!==b.dataset.id);
+        renderTeeth(); refreshSummary();
+      }));
     }
     refreshSubLists();
     refreshSummary();
+    renderTeeth();
 
     document.getElementById('backToPlansListBtn').addEventListener('click', ()=>{
       currentPlanDraft = null;
@@ -3502,32 +4924,79 @@ window.__firestoreClinicId = '';
   }
   document.getElementById('authToggleMode').addEventListener('click', ()=> showAuthScreen(authMode==='signup' ? 'login' : 'signup'));
 
-  async function fetchUsersFor(){
+  async function fetchLegacyUsers(){
     try{ const r = await window.storage.get(K.users, SHARED); return r ? JSON.parse(r.value) : []; }catch(e){ return []; }
   }
 
   async function registerClinicForApproval(uid, clinicId, clinicNameRaw, managerName, managerEmail, autoApprove){
-    let registry = [];
-    try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
-    if(registry.some(r=>r.clinicId===clinicId)) return;
-    registry.unshift({ clinicId, clinicName: clinicNameRaw.trim(), managerName, managerEmail, uid, requestedAt: new Date().toISOString(), status: autoApprove ? 'approved' : 'pending' });
-    try{ await setClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry', JSON.stringify(registry)); }catch(e){ console.error(e); }
+    try{
+      const ref = __db.collection('platformRegistry').doc(clinicId);
+      const ex = await ref.get().catch(()=>null);
+      if(ex && ex.exists) return;
+      await ref.set({ clinicId, clinicName: clinicNameRaw.trim(), managerName, managerEmail, uid, requestedAt: new Date().toISOString(), status: autoApprove ? 'approved' : 'pending' });
+    }catch(e){ console.error(e); }
+  }
+
+  let authBusy = false;
+
+  // يحدد وضع العيادة (أعضاء / قديم) ويرجّع المستخدم لو هو عضو
+  async function establishMembership(fbUser){
+    labsSnap = {}; membersSnap = {};
+    const me = await readMemberDoc(fbUser.uid);
+    if(me){ memberMode = true; return me; }
+    memberMode = false;
+    const legacy = await fetchLegacyUsers();
+    const match = legacy.find(u=>u.uid===fbUser.uid);
+    if(match){ users = legacy; return match; }
+    return null;
+  }
+
+  async function finishLogin(me, logMsg){
+    currentUser = me;
+    if(memberMode) users = await fetchUsersFor();
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('splashScreen').classList.remove('hide');
+    try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){}
+    await loadAll();
+    applyRolePermissions();
+    resetInactivityTimer();
+    if(!memberMode && me.role==='manager'){
+      const ok = await migrateClinicToMembers();
+      if(ok){ users = await fetchUsersFor(); await loadData({ kv:false }); renderAll(); applyRolePermissions(); startRealtimeSync(); }
+    }
+    if(logMsg) logAction(logMsg);
+    refreshSecurityStatus();
+  }
+
+  // إنشاء عيادة جديدة والمستخدم يبقى صاحبها (مدير) — بيرفض لو الاسم مستخدم
+  async function createClinicAsOwner(fbUser, displayName, rawName){
+    const isSup = (fbUser.email||'').toLowerCase()===SUPERVISOR_EMAIL;
+    const legacy = await fetchLegacyUsers();
+    if(legacy.length) return { error:'taken' };
+    try{ const ex = await clinicRef().get(); if(ex.exists) return { error:'taken' }; }catch(e){}
+    try{
+      await clinicRef().set({ ownerUid: fbUser.uid, createdAt: new Date().toISOString(), migrationVersion: 2, labsMigrated: true });
+    }catch(e){ console.error(e); return { error:'taken' }; }
+    const me = { id: fbUser.uid, uid: fbUser.uid, name: displayName, email: fbUser.email, role:'manager', linkedDoctor:'', approved: isSup ? undefined : 'pending' };
+    memberMode = true; labsSnap = {}; membersSnap = {};
+    users = [me]; currentUser = me;
+    const saved = await saveUsers();
+    if(!saved) return { error:'failed' };
+    await registerClinicForApproval(fbUser.uid, clinicCode, rawName, displayName, fbUser.email, isSup);
+    return { user: me };
   }
 
   async function resumeSession(fbUser){
+    if(authBusy) return;
     let code = '';
     try{ const r = await window.storage.get(PERSONAL_KEY, false); code = r ? r.value : ''; }catch(e){ code = ''; }
     if(!code){ showAuthScreen('login', fbUser.email||''); return; }
     clinicCode = code;
     buildKeys();
-    const existingUsers = await fetchUsersFor();
-    const match = existingUsers.find(u=>u.uid===fbUser.uid);
-    if(!match){ showAuthScreen('login', fbUser.email||''); return; }
-    currentUser = match;
-    users = existingUsers;
-    await loadAll();
-    applyRolePermissions();
-    resetInactivityTimer();
+    const me = await establishMembership(fbUser);
+    if(!me){ showAuthScreen('login', fbUser.email||''); return; }
+    await finishLogin(me);
   }
 
   async function handleAuthSubmit(){
@@ -3537,7 +5006,6 @@ window.__firestoreClinicId = '';
     const name = document.getElementById('authName').value.trim();
     const errEl = document.getElementById('authError');
     errEl.textContent = '';
-    const isSupervisor = email.toLowerCase()===SUPERVISOR_EMAIL;
     const sanitized = sanitizeClinicCode(clinicNameRaw);
     if(!sanitized){ errEl.textContent = 'اكتب اسم العيادة'; return; }
     if(!email || !password){ errEl.textContent = 'اكتب البريد الإلكتروني وكلمة المرور'; return; }
@@ -3547,48 +5015,36 @@ window.__firestoreClinicId = '';
     buildKeys();
     const btn = document.getElementById('authSubmitBtn');
     btn.disabled = true;
+    authBusy = true;
     try{
+      let me = null;
       if(authMode==='signup'){
         const cred = await __auth.createUserWithEmailAndPassword(email, password);
-        const existingUsers = await fetchUsersFor();
-        const isFirstUser = !existingUsers.length;
-        const newUser = {
-          id: cred.user.uid, uid: cred.user.uid, name, email,
-          role: isFirstUser ? 'manager' : 'reception',
-          linkedDoctor: '',
-          approved: (isFirstUser && !isSupervisor) ? 'pending' : undefined
-        };
-        existingUsers.push(newUser);
-        users = existingUsers;
-        await saveUsers();
-        currentUser = newUser;
-        if(isFirstUser){
-          await registerClinicForApproval(cred.user.uid, clinicCode, clinicNameRaw, name, email, isSupervisor);
-        }
-      } else {
-        const cred = await __auth.signInWithEmailAndPassword(email, password);
-        const existingUsers = await fetchUsersFor();
-        const match = existingUsers.find(u=>u.uid===cred.user.uid);
-        if(!match){
-          errEl.textContent = `الحساب ده مش مسجل في عيادة "${clinicNameRaw.trim()}". تأكد من اسم العيادة، أو اعمل حساب جديد لو دي عيادتك الأولى.`;
-          btn.disabled = false;
+        const res = await createClinicAsOwner(cred.user, name, clinicNameRaw);
+        if(res.error){
+          try{ await cred.user.delete(); }catch(e){ try{ await __auth.signOut(); }catch(_){} }
+          errEl.textContent = res.error==='taken'
+            ? 'اسم العيادة ده مستخدم بالفعل. لو عيادتك موجودة اطلب من مديرها يضيفك من تبويب "المستخدمون"، أو اختار اسم تاني.'
+            : 'تعذر إنشاء العيادة، حاول تاني.';
           return;
         }
-        users = existingUsers;
-        currentUser = match;
+        me = res.user;
+      } else {
+        const cred = await __auth.signInWithEmailAndPassword(email, password);
+        me = await establishMembership(cred.user);
+        if(!me){
+          errEl.textContent = `الحساب ده مش مسجل في عيادة "${clinicNameRaw.trim()}". تأكد من اسم العيادة، أو اطلب من المدير يضيفك.`;
+          return;
+        }
       }
-      try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){}
-      document.getElementById('authScreen').style.display = 'none';
-      document.getElementById('splashScreen').classList.remove('hide');
-      await loadAll();
-      applyRolePermissions();
-      resetInactivityTimer();
-      logAction(authMode==='signup' ? 'إنشاء حساب وعيادة جديدة' : 'تسجيل دخول');
+      await finishLogin(me, authMode==='signup' ? 'إنشاء حساب وعيادة جديدة' : 'تسجيل دخول');
     }catch(err){
       console.error(err);
       errEl.textContent = firebaseErrorMessage(err);
+    }finally{
+      setTimeout(()=>{ authBusy = false; }, 1500);
+      btn.disabled = false;
     }
-    btn.disabled = false;
   }
   document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
   document.getElementById('authForgotPassword').addEventListener('click', async ()=>{
@@ -3608,31 +5064,21 @@ window.__firestoreClinicId = '';
     if(!sanitized){ errEl.textContent = 'اكتب اسم عيادة صحيح'; return; }
     const fbUser = __auth.currentUser;
     if(!fbUser){ errEl.textContent = 'لازم تسجل دخول الأول'; return; }
+    const prev = { code: clinicCode, mode: memberMode, labsSnap, membersSnap };
     clinicCode = sanitized;
     buildKeys();
-    const existingUsers = await fetchUsersFor();
-    let match = existingUsers.find(u=>u.uid===fbUser.uid);
-    if(!match && !existingUsers.length){
-      // clinic brand new under this account -> become its manager
-      const isSupervisor = fbUser.email && fbUser.email.toLowerCase()===SUPERVISOR_EMAIL;
-      match = { id: fbUser.uid, uid: fbUser.uid, name: currentUser?currentUser.name:fbUser.email, email: fbUser.email, role:'manager', linkedDoctor:'', approved: isSupervisor ? undefined : 'pending' };
-      existingUsers.push(match);
-      users = existingUsers;
-      await saveUsers();
-      await registerClinicForApproval(fbUser.uid, clinicCode, val, match.name, fbUser.email, isSupervisor);
-    } else if(!match){
-      errEl.textContent = 'معندكش صلاحية في العيادة دي — لازم مديرها يضيفك من تبويب "المستخدمون"';
-      return;
-    } else {
-      users = existingUsers;
+    let me = await establishMembership(fbUser);
+    if(!me){
+      const res = await createClinicAsOwner(fbUser, currentUser?currentUser.name:fbUser.email, val);
+      if(res.error){
+        clinicCode = prev.code; buildKeys(); memberMode = prev.mode; labsSnap = prev.labsSnap; membersSnap = prev.membersSnap;
+        errEl.textContent = 'معندكش صلاحية في العيادة دي — لازم مديرها يضيفك من تبويب "المستخدمون"';
+        return;
+      }
+      me = res.user;
     }
-    currentUser = match;
-    try{ await window.storage.set(PERSONAL_KEY, clinicCode, false); }catch(e){}
-    document.getElementById('setupScreen').style.display = 'none';
-    document.getElementById('splashScreen').classList.remove('hide');
-    await loadAll();
-    applyRolePermissions();
-    logAction('تبديل العيادة إلى: ' + clinicCode);
+    stopRealtimeSync();
+    await finishLogin(me, 'تبديل العيادة إلى: ' + clinicCode);
   }
   document.getElementById('clinicEnterBtn').addEventListener('click', enterClinic);
   document.getElementById('clinicCodeInput').addEventListener('keydown', e=>{ if(e.key==='Enter') enterClinic(); });
@@ -3651,6 +5097,7 @@ window.__firestoreClinicId = '';
     if(inactivityTimer) clearTimeout(inactivityTimer);
     document.getElementById('view-dash').classList.add('active');
     document.querySelectorAll('.view').forEach(v=>{ if(v.id!=='view-dash') v.classList.remove('active'); });
+    stopRealtimeSync();
     __auth.signOut();
     showAuthScreen('login');
   }
@@ -3659,7 +5106,7 @@ window.__firestoreClinicId = '';
     if(fbUser){
       await resumeSession(fbUser);
     } else {
-      showAuthScreen('login');
+      if(!authBusy) showAuthScreen('login');
     }
   });
 
@@ -3698,6 +5145,7 @@ window.__firestoreClinicId = '';
     }
 
     document.getElementById('switchClinicBtn').style.display = currentUser.role==='manager' ? '' : 'none';
+    document.getElementById('scanDupBtn').style.display = currentUser.role==='manager' ? '' : 'none';
 
     const fDoctor = document.getElementById('fDoctor');
     const filterDoctor = document.getElementById('filterDoctor');
@@ -3721,6 +5169,11 @@ window.__firestoreClinicId = '';
   document.getElementById('newUserRole').addEventListener('change', function(){
     const wrap = document.getElementById('newUserLinkWrap');
     wrap.style.display = this.value==='doctor' ? 'block' : 'none';
+    const labWrap = document.getElementById('newUserLabWrap');
+    labWrap.style.display = this.value==='lab' ? 'block' : 'none';
+    if(this.value==='lab'){
+      document.getElementById('newUserLabSelect').innerHTML = '<option value="">اختار المعمل</option>' + labsData.labs.map(l=>`<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('');
+    }
     if(this.value==='doctor'){
       const sel = document.getElementById('newUserLinkDoctor');
       sel.innerHTML = '<option value="">اربط باسم طبيب (اختياري)</option>' + doctorNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
@@ -3791,9 +5244,15 @@ window.__firestoreClinicId = '';
     const password = document.getElementById('newUserPassword').value;
     const role = document.getElementById('newUserRole').value;
     const linkedDoctor = document.getElementById('newUserLinkDoctor').value;
+    const labId = document.getElementById('newUserLabSelect').value;
     const errEl = document.getElementById('newUserError');
     errEl.textContent = '';
     if(!name){ errEl.textContent = 'اكتب اسم المستخدم'; return; }
+    if(currentUser.approved && currentUser.approved!=='approved'){ errEl.textContent = 'إضافة المستخدمين بتتفعّل بعد موافقة المشرف على العيادة'; return; }
+    if(role==='lab'){
+      if(!memberMode){ errEl.textContent = 'حسابات المعامل محتاجة ترحيل العيادة لنظام الأمان الجديد الأول (الزرار فوق)'; return; }
+      if(!labId){ errEl.textContent = 'اختار المعمل'; return; }
+    }
     if(role==='manager' && !email){ errEl.textContent = 'لازم بريد إلكتروني حقيقي لحساب مدير (عشان تصفير كلمة المرور لو نسيها)'; return; }
     if(!password || password.length<6){ errEl.textContent = 'كلمة المرور لازم ٦ أحرف على الأقل'; return; }
     let autoGenerated = false;
@@ -3808,8 +5267,9 @@ window.__firestoreClinicId = '';
       const cred = await __secondaryAuth.createUserWithEmailAndPassword(email, password);
       const newUid = cred.user.uid;
       await __secondaryAuth.signOut();
-      users.push({ id: newUid, uid: newUid, name, email, autoEmail: autoGenerated, role, linkedDoctor: role==='doctor'?linkedDoctor:'' });
-      await saveUsers();
+      users.push({ id: newUid, uid: newUid, name, email, autoEmail: autoGenerated, role, linkedDoctor: role==='doctor'?linkedDoctor:'', labId: role==='lab'?labId:'', createdAt: new Date().toISOString() });
+      const savedOk = await saveUsers();
+      if(!savedOk){ users = users.filter(u=>u.uid!==newUid); throw new Error('members-save-failed'); }
       document.getElementById('newUserName').value='';
       document.getElementById('newUserEmail').value='';
       document.getElementById('newUserPassword').value='';
@@ -3849,20 +5309,31 @@ window.__firestoreClinicId = '';
     renderNotifications();
   });
 
+  async function fetchRegistry(){
+    let list = [];
+    try{ const s = await __db.collection('platformRegistry').get(); list = s.docs.map(d=>d.data()); }catch(e){ console.warn(e); }
+    try{
+      const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry');
+      (raw ? JSON.parse(raw) : []).forEach(r=>{ if(!list.some(x=>x.clinicId===r.clinicId)) list.push(r); });
+    }catch(e){}
+    return list.sort((a,b)=> (b.requestedAt||'') > (a.requestedAt||'') ? 1 : -1);
+  }
   async function decideClinicApproval(clinicId, decision){
-    let registry = [];
-    try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
+    const registry = await fetchRegistry();
     const entry = registry.find(r=>r.clinicId===clinicId);
     if(!entry) return;
     entry.status = decision;
-    try{ await setClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry', JSON.stringify(registry)); }catch(e){ console.error(e); }
+    try{ await __db.collection('platformRegistry').doc(clinicId).set(cleanJson(entry)); }catch(e){ console.error(e); toast('تعذر حفظ القرار'); return; }
+    // المصدر الأساسي دلوقتي: مستند العضوية بتاع المدير
+    try{ await __db.collection('clinics').doc(clinicId).collection('members').doc(entry.uid).update({ approved: decision }); }catch(e){ console.warn('member doc not updated', e); }
+    // النظام القديم (لسه ما اتحوّلتش)
     try{
       const usersKey = `dz-${clinicId}-users`;
       const raw = await getClinicKV(clinicId, usersKey);
       const clinicUsers = raw ? JSON.parse(raw) : [];
       const mgr = clinicUsers.find(u=>u.uid===entry.uid);
       if(mgr){ mgr.approved = decision; await setClinicKV(clinicId, usersKey, JSON.stringify(clinicUsers)); }
-    }catch(e){ console.error(e); }
+    }catch(e){ console.warn(e); }
     toast(decision==='approved' ? 'تم قبول العيادة' : 'تم رفض العيادة');
     logAction(`${decision==='approved'?'قبول':'رفض'} عيادة: ${entry.clinicName}`);
     renderApprovals();
@@ -3872,8 +5343,7 @@ window.__firestoreClinicId = '';
   async function refreshApprovalsBadge(){
     const badge = document.getElementById('approvalsBadge');
     if(!badge) return;
-    let registry = [];
-    try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
+    const registry = await fetchRegistry();
     const pending = registry.filter(r=>r.status==='pending').length;
     badge.style.display = pending ? 'inline-flex' : 'none';
     badge.textContent = pending>99 ? '99+' : pending;
@@ -3883,8 +5353,7 @@ window.__firestoreClinicId = '';
     const box = document.getElementById('approvalsList');
     if(!box) return;
     box.innerHTML = '<div class="empty-note">جاري التحميل…</div>';
-    let registry = [];
-    try{ const raw = await getClinicKV(PLATFORM_CLINIC_ID, 'clinicRegistry'); registry = raw ? JSON.parse(raw) : []; }catch(e){ registry = []; }
+    const registry = await fetchRegistry();
     if(!registry.length){ box.innerHTML = '<div class="empty-note">لا توجد عيادات مسجلة بعد</div>'; return; }
     const statusLabel = { pending:'قيد المراجعة', approved:'مقبولة', rejected:'مرفوضة' };
     box.innerHTML = registry.map(r=>{
@@ -3920,6 +5389,7 @@ window.__firestoreClinicId = '';
   }
 
   function renderUsers(){
+    refreshSecurityStatus();
     const nameInput = document.getElementById('clinicNameInput');
     if(nameInput) nameInput.value = settings.clinicName || '';
     const box = document.getElementById('usersList');
@@ -3934,7 +5404,7 @@ window.__firestoreClinicId = '';
           <div class="doc-list-name">${escapeHtml(u.name)} <span class="role-badge">${ROLE_LABEL[u.role]}</span></div>
           <button class="rm-btn" data-id="${u.id}" ${u.id===currentUser.id?'disabled style="opacity:.3"':''}>✕</button>
         </div>
-        <div class="stat-sub" style="margin-top:2px;">بريد الدخول: ${escapeHtml(u.email||'')}${u.autoEmail?' (اتعمل تلقائي — ده اللي هيدخل بيه)':''}${u.linkedDoctor?(' · مرتبط بـ '+escapeHtml(u.linkedDoctor)):''}</div>
+        <div class="stat-sub" style="margin-top:2px;">بريد الدخول: ${escapeHtml(u.email||'')}${u.autoEmail?' (اتعمل تلقائي — ده اللي هيدخل بيه)':''}${u.linkedDoctor?(' · مرتبط بـ '+escapeHtml(u.linkedDoctor)):''}${u.labId?(' · معمل: '+escapeHtml((labsData.labs.find(l=>l.id===u.labId)||{}).name||'؟')):''}</div>
       `;
       box.appendChild(row);
     });
