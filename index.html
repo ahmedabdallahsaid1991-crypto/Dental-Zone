@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta name="app-build" content="20261115-1626">
+<meta name="app-build" content="20261117-0803">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#070707">
@@ -952,12 +952,12 @@
         <div class="field" style="margin-bottom:8px;"><select id="lpItem"><option value="">اختار الصنف</option></select></div>
       </div>
       <div class="row2">
-        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpPatient" placeholder="اسم المريض / رقم الحالة"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpPatient" maxlength="200" placeholder="اسم المريض / رقم الحالة"></div>
         <div class="field" style="margin-bottom:8px;"><select id="lpDoctor"><option value="">الطبيب (اختياري)</option></select></div>
       </div>
       <div class="row2">
         <div class="field" style="margin-bottom:8px;"><input type="number" min="1" id="lpQty" value="1" placeholder="العدد"></div>
-        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpNotes" placeholder="ملاحظات (اختياري)"></div>
+        <div class="field" style="margin-bottom:8px;"><input type="text" id="lpNotes" maxlength="500" placeholder="ملاحظات (اختياري)"></div>
       </div>
       <button class="btn-mini" id="lpAddBtn" style="width:100%;">إرسال للعيادة للاعتماد</button>
     </div>
@@ -1228,11 +1228,13 @@ window.__firestoreClinicId = '';
     return d && d.splits ? d.splits : defaultSplits();
   }
 
+  let toastTimer = null;
   function toast(msg){
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 1800);
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
   }
 
   // ---------- Accounting period (21st -> 20th of next month) ----------
@@ -1385,11 +1387,11 @@ window.__firestoreClinicId = '';
       attachments: (lab.attachments||[]).map(a=>({ id:a.id, name:a.name, mime:a.mime||'', size:a.size||0, uploadedAt:a.uploadedAt||'', parts: Math.max(1, Math.ceil((a.dataUrl||'').length/ATT_PART)) }))
     };
   }
-  async function loadLabsData(){
+  async function loadLabsData(keepOnError){
     const empty = ()=>({ labs:[], items:[], work:[], invoices:[] });
     if(!memberMode){
       try{ const r = await window.storage.get(K.labs, SHARED); labsData = r ? JSON.parse(r.value) : empty(); }
-      catch(e){ labsData = empty(); }
+      catch(e){ if(!keepOnError) labsData = empty(); }
       if(!labsData.invoices) labsData.invoices = [];
       return;
     }
@@ -1437,15 +1439,15 @@ window.__firestoreClinicId = '';
       labsSnap = snap;
     }catch(e){
       console.error(e);
-      toast('تعذر تحميل بيانات المعامل');
-      labsData = empty();
+      if(!keepOnError){ toast('تعذر تحميل بيانات المعامل'); labsData = empty(); }
     }
   }
 
-  async function saveLabs(){
+  async function saveLabs(opts){
+    opts = (opts && typeof opts==='object' && !opts.target) ? opts : {};
     if(!memberMode){
       try{ await window.storage.set(K.labs, JSON.stringify(labsData), SHARED); return true; }
-      catch(e){ console.error(e); toast('تعذر الحفظ، الحجم الكلي كبير جدًا'); return false; }
+      catch(e){ console.error(e); toast('تعذر الحفظ — التغيير ما اتسجلش'); if(!opts.noReload){ try{ await loadLabsData(true); }catch(_){} } return false; }
     }
     try{
       const role = currentUser ? currentUser.role : '';
@@ -1519,52 +1521,99 @@ window.__firestoreClinicId = '';
       return true;
     }catch(e){
       console.error(e);
-      toast('تعذر حفظ بيانات المعامل — راجع الاتصال أو الصلاحيات');
+      toast('تعذر حفظ بيانات المعامل — التغيير ما اتسجلش. راجع الاتصال أو الصلاحيات');
+      if(!opts.noReload){ try{ await loadLabsData(true); }catch(_){} }
       return false;
     }
   }
 
   // ----- migration of a legacy clinic -----
+  // يسجّل مسارات مستندات المعامل الموجودة فعلًا (لو فيه بقايا من محاولة سابقة) عشان الحفظ يمسح الزايد
+  async function seedLabsSnapFromServer(){
+    const snap = {};
+    const labs = await labsCol().get();
+    for(const d of labs.docs){
+      snap[d.ref.path] = 'stale';
+      for(const sub of ['work','invoices']){
+        const s = await d.ref.collection(sub).get();
+        s.docs.forEach(x=>{ snap[x.ref.path] = 'stale'; });
+      }
+      const fs = await d.ref.collection('files').get();
+      fs.docs.forEach(x=>{ snap[x.ref.path] = ''; });   // فاضي = يتكتب من جديد لو مطلوب، ويتمسح لو مش مطلوب
+    }
+    return snap;
+  }
+  // ترتيب الترحيل: (١) مستند العيادة بعلامة labsMigrated=false  (٢) بيانات المعامل  (٣) العلامة تبقى true  (٤) الأعضاء في الآخر
+  // مستند العضو بيتكتب أخيرًا، فوجوده معناه إن الترحيل كمل.
   async function migrateClinicToMembers(){
     if(memberMode || !currentUser || currentUser.role!=='manager') return false;
+    let stage = 'start';
     try{
       const rootRef = clinicRef();
       const root = await rootRef.get();
-      if(!root.exists) await rootRef.set({ ownerUid: currentUser.uid, createdAt: new Date().toISOString(), migrationVersion: 2 });
+      if(!root.exists) await rootRef.set({ ownerUid: currentUser.uid, createdAt: new Date().toISOString(), migrationVersion: 2, labsMigrated: false });
+      stage = 'labs';
+      memberMode = true; membersSnap = {};
+      labsSnap = await seedLabsSnapFromServer();
+      const ok = await saveLabs({ noReload:true });
+      if(!ok) throw new Error('labs-save-failed');
+      stage = 'flag';
+      await rootRef.update({ labsMigrated:true, migratedAt: new Date().toISOString() });
+      stage = 'members';
       const all = users.length ? users : [currentUser];
       const ordered = [currentUser].concat(all.filter(u=>u.uid!==currentUser.uid));
       const base = rootRef.collection('members');
       for(const u of ordered){ await base.doc(u.uid).set(cleanJson(memberData(u))); }
-      memberMode = true; membersSnap = {}; labsSnap = {};
       ordered.forEach(u=>{ membersSnap[u.uid] = JSON.stringify(cleanJson(memberData(u))); });
-      const ok = await saveLabs();
-      if(!ok){ memberMode = false; return false; }
-      await rootRef.update({ labsMigrated:true, migratedAt:new Date().toISOString() });
       logAction('ترحيل العيادة لنظام العضوية ومستندات المعامل');
       toast('تم تحويل العيادة لنظام الأمان الجديد ✅');
       return true;
     }catch(e){
-      console.error(e);
-      memberMode = false;
-      toast('تعذر ترحيل العيادة — هتفضل شغالة بالنظام القديم');
+      console.error('migration failed at stage', stage, e);
+      memberMode = false; membersSnap = {}; labsSnap = {};
+      toast('تعذر ترحيل العيادة (مرحلة: ' + stage + ') — هتفضل شغالة بالنظام القديم وبياناتك سليمة');
       return false;
     }
+  }
+  async function syncMissingMembers(){
+    if(!memberMode || !currentUser || currentUser.role!=='manager') return 0;
+    const legacy = await fetchLegacyUsers();
+    const have = new Set(users.map(u=>u.uid));
+    const miss = legacy.filter(u=>u.uid && !have.has(u.uid));
+    if(!miss.length) return 0;
+    miss.forEach(u=>users.push(Object.assign({}, u)));
+    return (await saveUsers()) ? miss.length : -1;
   }
   function refreshSecurityStatus(){
     const el = document.getElementById('securityStatus');
     if(!el) return;
     if(!currentUser || currentUser.role!=='manager'){ el.style.display = 'none'; return; }
     el.style.display = 'block';
-    el.innerHTML = memberMode
-      ? `✅ العيادة على نظام الأمان الجديد (${users.length} عضو). قواعد Firestore الجديدة تقدر تتنشر دلوقتي.`
-      : `⚠️ العيادة لسه على النظام القديم. <button class="btn-mini gold" id="migrateNowBtn" style="margin-right:8px;">ترحيل الآن</button>`;
-    const b = document.getElementById('migrateNowBtn');
-    if(b) b.addEventListener('click', async ()=>{
-      b.disabled = true;
-      const ok = await migrateClinicToMembers();
-      if(ok){ users = await fetchUsersFor(); await loadData({ kv:false }); renderAll(); applyRolePermissions(); startRealtimeSync(); }
-      refreshSecurityStatus();
-    });
+    if(!memberMode){
+      el.innerHTML = `⚠️ العيادة لسه على النظام القديم. <button class="btn-mini gold" id="migrateNowBtn" style="margin-right:8px;">ترحيل الآن</button>`;
+      const b = document.getElementById('migrateNowBtn');
+      if(b) b.addEventListener('click', async ()=>{
+        b.disabled = true;
+        const ok = await migrateClinicToMembers();
+        if(ok){ users = await fetchUsersFor(); await loadData({ kv:false }); renderAll(); applyRolePermissions(); startRealtimeSync(); }
+        refreshSecurityStatus();
+      });
+      return;
+    }
+    el.innerHTML = `✅ العيادة على نظام الأمان الجديد (${users.length} عضو). قواعد Firestore الجديدة تقدر تتنشر دلوقتي.`;
+    fetchLegacyUsers().then(legacy=>{
+      const have = new Set(users.map(u=>u.uid));
+      const miss = legacy.filter(u=>u.uid && !have.has(u.uid));
+      if(!miss.length) return;
+      el.innerHTML += `<br>⚠️ فيه ${miss.length} مستخدم لسه مش مرحّلين (${miss.map(u=>escapeHtml(u.name||'')).join('، ')}) — لازم يترحّلوا قبل القواعد الصارمة. <button class="btn-mini gold" id="syncMembersBtn" style="margin-right:8px;">ترحيلهم الآن</button>`;
+      const sb = document.getElementById('syncMembersBtn');
+      if(sb) sb.addEventListener('click', async ()=>{
+        sb.disabled = true;
+        const n = await syncMissingMembers();
+        toast(n>0 ? ('تم ترحيل '+n+' مستخدم') : 'تعذر ترحيل المستخدمين');
+        renderUsers();
+      });
+    }).catch(()=>{});
   }
 
   // ---------- Lab portal (حساب المعمل) ----------
@@ -1614,7 +1663,8 @@ window.__firestoreClinicId = '';
     const qty = parseFloat(document.getElementById('lpQty').value)||0;
     if(!item){ toast('اختار الصنف'); return; }
     if(!patient){ toast('اكتب اسم المريض أو رقم الحالة'); return; }
-    if(qty<=0){ toast('اكتب عدد صحيح'); return; }
+    if(qty<=0 || qty>1000){ toast('اكتب عدد صحيح (من ١ إلى ١٠٠٠)'); return; }
+    if(patient.length>200){ toast('اسم المريض طويل جدًا'); return; }
     labsData.work.push({
       id: genId(), labId: lab.id, date: document.getElementById('lpDate').value || new Date().toISOString().slice(0,10),
       patient, doctor: document.getElementById('lpDoctor').value, itemId: item.id, itemName: item.name, qty,
@@ -1632,10 +1682,12 @@ window.__firestoreClinicId = '';
   async function approveLabWork(w){
     const item = labsData.items.find(it=>it.id===w.itemId) || labsData.items.find(it=>it.labId===w.labId && normName(it.name)===normName(w.itemName));
     if(!item){ toast('الصنف "'+w.itemName+'" مش في قائمة أسعار المعمل — أضفه الأول'); return false; }
+    const qty = Number(w.qty);
+    if(!(qty>0) || !isFinite(qty)){ toast('العدد غير صحيح في العمل ده — ارفضه أو صحّحه'); return false; }
     const doc = doctorNames().find(n=>normName(n)===normName(w.doctor||''));
     Object.assign(w, {
-      approval:'approved', itemId:item.id, itemName:item.name, unitPrice:item.price, discPct:w.discPct||0,
-      total: w.qty*item.price*(1-(w.discPct||0)/100), doctor: doc||'',
+      approval:'approved', itemId:item.id, itemName:item.name, unitPrice:item.price, discPct:0,
+      qty, total: qty*item.price, doctor: doc||'',
       approvedBy: currentUser?currentUser.name:'—', approvedAt: new Date().toISOString()
     });
     return true;
@@ -1782,17 +1834,28 @@ window.__firestoreClinicId = '';
     }, 900);
   }
 
-  async function saveEntries(){ try{ await window.storage.set(K.entries, JSON.stringify(entries), SHARED); }catch(e){ console.error(e); toast('تعذر الحفظ، حاول مرة أخرى'); } }
-  async function saveDoctors(){ try{ await window.storage.set(K.doctors, JSON.stringify(doctors), SHARED); }catch(e){ console.error(e); } }
-  async function savePatients(){ try{ await window.storage.set(K.patients, JSON.stringify(patients), SHARED); }catch(e){ console.error(e); } }
-  async function saveSettings(){ try{ await window.storage.set(K.settings, JSON.stringify(settings), SHARED); }catch(e){ console.error(e); } }
-  async function saveServices(){ try{ await window.storage.set(K.services, JSON.stringify(services), SHARED); }catch(e){ console.error(e); } }
-  async function saveAdjustments(){ try{ await window.storage.set(K.adjustments, JSON.stringify(adjustments), SHARED); }catch(e){ console.error(e); } }
-  async function saveNotifications(){ try{ await window.storage.set(K.notifications, JSON.stringify(notifications), SHARED); }catch(e){ console.error(e); } }
-  async function saveExpenses(){ try{ await window.storage.set(K.expenses, JSON.stringify(expenses), SHARED); }catch(e){ console.error(e); } }
-  async function saveInventoryItems(){ try{ await window.storage.set(K.inventoryItems, JSON.stringify(inventoryItems), SHARED); }catch(e){ console.error(e); } }
-  async function saveInventoryTx(){ try{ await window.storage.set(K.inventoryTx, JSON.stringify(inventoryTx), SHARED); }catch(e){ console.error(e); } }
-  async function saveTreatmentPlans(){ try{ await window.storage.set(K.treatmentPlans, JSON.stringify(treatmentPlans), SHARED); }catch(e){ console.error(e); } }
+  // كل دوال الحفظ بترجّع true لو نجحت و false لو فشلت (عشان نتراجع ونبلّغ المستخدم بدل ما نقول "تم" غلط)
+  async function saveBlob(key, value, quiet){
+    try{ await window.storage.set(key, JSON.stringify(value), SHARED); return true; }
+    catch(e){ console.error(e); if(!quiet) toast('تعذر الحفظ — التغيير ما اتسجلش. راجع الاتصال أو الصلاحيات'); return false; }
+  }
+  async function saveEntries(){ return saveBlob(K.entries, entries); }
+  async function saveDoctors(){ return saveBlob(K.doctors, doctors); }
+  async function savePatients(){ return saveBlob(K.patients, patients, true); }
+  async function saveSettings(){ return saveBlob(K.settings, settings); }
+  async function saveServices(){ return saveBlob(K.services, services); }
+  async function saveAdjustments(){ return saveBlob(K.adjustments, adjustments); }
+  async function saveNotifications(){ return saveBlob(K.notifications, notifications, true); }
+  async function saveExpenses(){ return saveBlob(K.expenses, expenses); }
+  async function saveInventoryItems(){ return saveBlob(K.inventoryItems, inventoryItems); }
+  async function saveInventoryTx(){ return saveBlob(K.inventoryTx, inventoryTx); }
+  async function saveTreatmentPlans(){ return saveBlob(K.treatmentPlans, treatmentPlans); }
+  // حفظ الصنف والحركة مع تراجع لو أي واحد فشل (مش ذرّي بالكامل — ده في خطة P1)
+  async function saveInvPair(snapItemsJson, snapTxJson){
+    if(!(await saveInventoryItems())){ inventoryItems = JSON.parse(snapItemsJson); inventoryTx = JSON.parse(snapTxJson); renderInventory(); return false; }
+    if(!(await saveInventoryTx())){ inventoryItems = JSON.parse(snapItemsJson); inventoryTx = JSON.parse(snapTxJson); await saveInventoryItems(); renderInventory(); return false; }
+    return true;
+  }
   async function notifyManagers(message){
     if(currentUser && currentUser.role==='lab') return;
     notifications.unshift({ id: genId(), ts: new Date().toISOString(), message, read:false });
@@ -2192,6 +2255,7 @@ window.__firestoreClinicId = '';
       finalValue = currentValue;
     }
 
+    const snapEntries = JSON.stringify(entries), snapPatients = JSON.stringify(patients);
     const p = findOrCreatePatient(patientName, medNum);
     if(medChangeApproved){
       p.medNum = medNum;
@@ -2217,17 +2281,21 @@ window.__firestoreClinicId = '';
     if(editingId){
       const idx = entries.findIndex(x=>x.id===editingId);
       if(idx>-1) entries[idx] = Object.assign({id:editingId}, data);
-      toast('تم تعديل العملية');
       wasEdit = true;
     } else {
       entries.unshift(Object.assign({id: genId()}, data));
-      toast(wasContinuation ? 'تم تسجيل الإيصال وربطه بالإجراء السابق' : 'تم حفظ العملية');
     }
 
+    if(!(await saveEntries())){
+      entries = JSON.parse(snapEntries); patients = JSON.parse(snapPatients);
+      rebuildPatientDatalist();
+      toast('الإيصال ما اتسجلش — تعذر الحفظ. راجع الاتصال وحاول تاني');
+      return;
+    }
+    await savePatients();
     continuingGroupKey = null;
     document.getElementById('continuePaymentBanner').style.display = 'none';
-    await saveEntries();
-    await savePatients();
+    toast(wasEdit ? 'تم تعديل العملية' : (wasContinuation ? 'تم تسجيل الإيصال وربطه بالإجراء السابق' : 'تم حفظ العملية'));
     resetForm();
     rebuildPatientDatalist();
     renderPeriodSelect(); renderFilterPeriodSelect();
@@ -2276,8 +2344,9 @@ window.__firestoreClinicId = '';
   async function deleteEntry(id){
     const removed = entries.find(x=>x.id===id);
     if(removed && !confirm(`تأكيد حذف إيصال ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م؟ الحذف نهائي.`)) return;
+    const snapDel = JSON.stringify(entries);
     entries = entries.filter(x=>x.id!==id);
-    await saveEntries();
+    if(!(await saveEntries())){ entries = JSON.parse(snapDel); renderRecords(); renderPatients(); return; }
     renderPeriodSelect(); renderFilterPeriodSelect();
     renderDashboard();
     renderRecords();
@@ -2647,6 +2716,7 @@ window.__firestoreClinicId = '';
     const category = document.getElementById('expCategory').value;
     const description = document.getElementById('expDesc').value.trim();
     if(!amount || amount<=0){ toast('اكتب قيمة المصروف'); return; }
+    const snapExp = JSON.stringify(expenses);
     if(editingExpenseId){
       const idx = expenses.findIndex(x=>x.id===editingExpenseId);
       if(idx>-1){
@@ -2659,7 +2729,7 @@ window.__firestoreClinicId = '';
       toast('تم حفظ المصروف');
       logAction(`إضافة مصروف: ${category} · ${fmt(amount)} ج.م`);
     }
-    await saveExpenses();
+    if(!(await saveExpenses())){ expenses = JSON.parse(snapExp); renderExpenses(); toast('المصروف ما اتسجلش — تعذر الحفظ'); return; }
     resetExpenseForm();
     renderExpenses();
     renderDashboard();
@@ -2736,11 +2806,12 @@ window.__firestoreClinicId = '';
       const x = expenses.find(v=>v.id===delBtn.dataset.id);
       if(!x) return;
       if(!confirm(`تأكيد حذف مصروف ${x.category} بقيمة ${fmt(x.amount)} ج.م؟`)) return;
+      const snapExpDel = JSON.stringify(expenses);
       expenses = expenses.filter(v=>v.id!==delBtn.dataset.id);
-      saveExpenses();
-      logAction(`حذف مصروف: ${x.category} · ${fmt(x.amount)} ج.م`);
-      renderExpenses();
-      renderDashboard();
+      saveExpenses().then(ok=>{
+        if(!ok) expenses = JSON.parse(snapExpDel); else logAction(`حذف مصروف: ${x.category} · ${fmt(x.amount)} ج.م`);
+        renderExpenses(); renderDashboard();
+      });
       return;
     }
   });
@@ -3380,13 +3451,14 @@ window.__firestoreClinicId = '';
     box.querySelectorAll('.lab-approve').forEach(b=>b.addEventListener('click', async ()=>{
       const w = labsData.work.find(x=>x.id===b.dataset.id); if(!w) return;
       if(!(await approveLabWork(w))) return;
-      await saveLabs(); logAction(`اعتماد عمل معمل: ${w.patient} · ${w.itemName}`);
+      if(!(await saveLabs())){ renderLabs(); renderDashboard(); return; }
+      logAction(`اعتماد عمل معمل: ${w.patient} · ${w.itemName}`);
       renderLabs(); renderDashboard();
     }));
     box.querySelectorAll('.lab-approve-all').forEach(b=>b.addEventListener('click', async ()=>{
       const list = labsData.work.filter(w=>w.labId===b.dataset.lid && w.approval==='pending');
       let n = 0; for(const w of list){ if(await approveLabWork(w)) n++; }
-      if(n){ await saveLabs(); logAction(`اعتماد ${n} عمل معمل`); toast(`تم اعتماد ${n} عمل`); }
+      if(n){ if(await saveLabs()){ logAction(`اعتماد ${n} عمل معمل`); toast(`تم اعتماد ${n} عمل`); } }
       renderLabs(); renderDashboard();
     }));
     box.querySelectorAll('.lab-reject').forEach(b=>b.addEventListener('click', async ()=>{
@@ -3394,7 +3466,8 @@ window.__firestoreClinicId = '';
       const reason = prompt('سبب الرفض (اختياري):', '');
       if(reason===null) return;
       w.approval = 'rejected'; w.rejectReason = reason.trim(); w.rejectedBy = currentUser?currentUser.name:'—'; w.rejectedAt = new Date().toISOString();
-      await saveLabs(); logAction(`رفض عمل معمل: ${w.patient} · ${w.itemName}`);
+      if(!(await saveLabs())){ renderLabs(); return; }
+      logAction(`رفض عمل معمل: ${w.patient} · ${w.itemName}`);
       renderLabs();
     }));
     box.querySelectorAll('.lab-import-work').forEach(b=>b.addEventListener('click', ()=>openLabImport(b.dataset.lid,'work')));
@@ -3613,6 +3686,7 @@ window.__firestoreClinicId = '';
       name, code, category: v('invCategory'), unit: v('invUnit'), purchaseUnit: v('invPurchaseUnit'), factor,
       minQty: n('invMinQty'), supplier: v('invSupplier'), unitPrice: n('invUnitPrice'), salePrice: n('invSalePrice'), notes: v('invNotes')
     };
+    const snapI = JSON.stringify(inventoryItems), snapT = JSON.stringify(inventoryTx);
     if(editingInvId){
       const idx = inventoryItems.findIndex(x=>x.id===editingInvId);
       if(idx>-1) inventoryItems[idx] = Object.assign({}, inventoryItems[idx], fields, { editedBy: currentUser?currentUser.name:'—', editedAt: new Date().toISOString() });
@@ -3626,7 +3700,7 @@ window.__firestoreClinicId = '';
       toast('تم إضافة الصنف');
       logAction(`إضافة صنف مخزن: ${name}`);
     }
-    await saveInventoryItems(); await saveInventoryTx();
+    if(!(await saveInvPair(snapI, snapT))){ toast('الصنف ما اتسجلش — تعذر الحفظ'); return; }
     resetInvForm();
     renderInventory();
   });
@@ -3655,6 +3729,7 @@ window.__firestoreClinicId = '';
     const factor = unitSel==='purchase' ? (Number(item.factor)||1) : 1;
     const qty = enteredQty * factor;
     if(type==='out' && qty>item.qty+1e-9){ toast('الكمية المتاحة أقل من كده'); return; }
+    const snapMI = JSON.stringify(inventoryItems), snapMT = JSON.stringify(inventoryTx);
     item.qty = type==='in' ? item.qty+qty : item.qty-qty;
     const enteredUnit = unitSel==='purchase' ? item.purchaseUnit : item.unit;
     inventoryTx.unshift({
@@ -3663,7 +3738,7 @@ window.__firestoreClinicId = '';
       date: document.getElementById('mvDate').value || new Date().toISOString().slice(0,10),
       note: document.getElementById('mvNote').value.trim(), recordedBy: currentUser?currentUser.name:'—'
     });
-    await saveInventoryItems(); await saveInventoryTx();
+    if(!(await saveInvPair(snapMI, snapMT))){ toast('الحركة ما اتسجلتش — تعذر الحفظ'); return; }
     logAction(`${type==='in'?'وارد':'منصرف'} مخزن: ${item.name} × ${fmt(qty)}`);
     toast('تم تسجيل الحركة');
     document.getElementById('mvQty').value = ''; document.getElementById('mvNote').value = '';
@@ -3751,10 +3826,11 @@ window.__firestoreClinicId = '';
       b.addEventListener('click', async ()=>{
         const x = inventoryItems.find(v=>v.id===b.dataset.id); if(!x) return;
         if(!confirm(`تأكيد حذف صنف "${x.name}" نهائيًا مع كل حركاته؟`)) return;
+        const snapDI = JSON.stringify(inventoryItems), snapDT = JSON.stringify(inventoryTx);
         inventoryItems = inventoryItems.filter(v=>v.id!==b.dataset.id);
         inventoryTx = inventoryTx.filter(t=>t.itemId!==b.dataset.id);
         invSelected.delete(b.dataset.id);
-        await saveInventoryItems(); await saveInventoryTx();
+        if(!(await saveInvPair(snapDI, snapDT))) return;
         logAction(`حذف صنف مخزن: ${x.name}`);
         renderInventory();
       });
@@ -3916,6 +3992,7 @@ window.__firestoreClinicId = '';
     if(sigs.includes(invImportParsed.sig) && !confirm('البيانات دي شبه اتستوردت قبل كده. تكمل الاستيراد برضه؟')) return;
     const who = currentUser ? currentUser.name : '—';
     const today = new Date().toISOString().slice(0,10);
+    const snapII = JSON.stringify(inventoryItems), snapIT = JSON.stringify(inventoryTx);
     let added=0, updated=0;
     invImportParsed.rows.forEach(r=>{
       const d = r.data;
@@ -3943,7 +4020,7 @@ window.__firestoreClinicId = '';
         updated++;
       }
     });
-    await saveInventoryItems(); await saveInventoryTx();
+    if(!(await saveInvPair(snapII, snapIT))){ toast('الاستيراد ما اتحفظش — تعذر الحفظ'); return; }
     sigs.push(invImportParsed.sig); try{ localStorage.setItem(sigKey, JSON.stringify(sigs.slice(-30))); }catch(e){}
     logAction(`استيراد مخزن من Excel: ${added} جديد، ${updated} تحديث`);
     toast(`تم الاستيراد: ${added} جديد، ${updated} تحديث`);
@@ -4525,6 +4602,7 @@ window.__firestoreClinicId = '';
       currentPlanDraft.diagnosis = document.getElementById('planDiagnosis').value.trim();
       currentPlanDraft.notes = document.getElementById('planNotes').value.trim();
       currentPlanDraft.paid = parseFloat(document.getElementById('planPaid').value)||0;
+      const snapPlans = JSON.stringify(treatmentPlans), wasNewPlan = !currentPlanDraft.id;
       if(currentPlanDraft.id){
         const idx = treatmentPlans.findIndex(p=>p.id===currentPlanDraft.id);
         if(idx>-1) treatmentPlans[idx] = currentPlanDraft;
@@ -4536,7 +4614,7 @@ window.__firestoreClinicId = '';
         treatmentPlans.unshift(currentPlanDraft);
         logAction(`إنشاء خطة علاج جديدة: ${currentPlanDraft.patientName}`);
       }
-      await saveTreatmentPlans();
+      if(!(await saveTreatmentPlans())){ treatmentPlans = JSON.parse(snapPlans); if(wasNewPlan) currentPlanDraft.id = null; toast('الخطة ما اتحفظتش — تعذر الحفظ'); return; }
       toast('تم حفظ خطة العلاج');
       closePlanModal();
     });
@@ -4544,8 +4622,9 @@ window.__firestoreClinicId = '';
     if(delBtn){
       delBtn.addEventListener('click', async ()=>{
         if(!confirm('تأكيد حذف خطة العلاج دي نهائيًا؟')) return;
+        const snapPD = JSON.stringify(treatmentPlans);
         treatmentPlans = treatmentPlans.filter(p=>p.id!==currentPlanDraft.id);
-        await saveTreatmentPlans();
+        if(!(await saveTreatmentPlans())){ treatmentPlans = JSON.parse(snapPD); return; }
         logAction(`حذف خطة علاج: ${currentPlanDraft.patientName}`);
         toast('تم حذف الخطة');
         closePlanModal();
@@ -4943,7 +5022,17 @@ window.__firestoreClinicId = '';
   async function establishMembership(fbUser){
     labsSnap = {}; membersSnap = {};
     const me = await readMemberDoc(fbUser.uid);
-    if(me){ memberMode = true; return me; }
+    if(me){
+      // لو الترحيل اتسجّل إنه ما خلصش (محاولة قديمة ناقصة) نكمل بالنظام القديم بدل ما نعرض بيانات ناقصة
+      let incomplete = false;
+      try{ const r = await clinicRef().get(); if(r.exists && r.data().labsMigrated===false) incomplete = true; }catch(e){}
+      if(!incomplete){ memberMode = true; return me; }
+      const legacyUsers = await fetchLegacyUsers();
+      const legacyMe = legacyUsers.find(u=>u.uid===fbUser.uid);
+      memberMode = false;
+      if(legacyMe){ users = legacyUsers; return legacyMe; }
+      memberMode = true; return me;
+    }
     memberMode = false;
     const legacy = await fetchLegacyUsers();
     const match = legacy.find(u=>u.uid===fbUser.uid);
@@ -5189,7 +5278,9 @@ window.__firestoreClinicId = '';
     const backup = {
       exportedAt: new Date().toISOString(),
       clinicCode: clinicCode,
+      backupVersion: 2, appBuild: (typeof CURRENT_BUILD!=='undefined' ? CURRENT_BUILD : ''),
       entries, doctors, patients, settings, labsData, services, adjustments,
+      expenses, inventoryItems, inventoryTx, treatmentPlans, notifications, auditLog,
       users: users.map(u=>({ id:u.id, name:u.name, role:u.role, linkedDoctor:u.linkedDoctor, pin:'' }))
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type:'application/json' });
@@ -5216,22 +5307,32 @@ window.__firestoreClinicId = '';
         if(!data || !Array.isArray(data.entries) || !Array.isArray(data.doctors)){
           toast('الملف مش نسخة احتياطية صحيحة'); inputEl.value=''; return;
         }
-        const ok = confirm('هتستبدل كل بيانات العيادة الحالية بالنسخة دي (المستخدمين وأرقامهم السرية هتفضل زي ما هي). متأكد؟');
+        const ok = confirm('هتستبدل بيانات العيادة الحالية (الإيصالات والأطباء والمرضى والمعامل والمصروفات والمخزن وخطط العلاج…) بالنسخة دي. المستخدمين وحساباتهم هتفضل زي ما هي. الأقسام اللي مش موجودة في النسخة (نسخ قديمة) مش هتتغيّر. متأكد؟');
         if(!ok){ inputEl.value=''; return; }
         entries = data.entries || [];
         doctors = data.doctors || [];
         patients = data.patients || [];
         settings = data.settings || { me:'' };
-        labsData = data.labsData || { labs:[], items:[], work:[] };
+        labsData = data.labsData || { labs:[], items:[], work:[], invoices:[] };
+        if(!labsData.invoices) labsData.invoices = [];
         services = data.services || [];
         adjustments = data.adjustments || [];
-        await saveEntries(); await saveDoctors(); await savePatients(); await saveSettings();
-        await saveLabs(); await saveServices(); await saveAdjustments();
-        rebuildPatientDatalist(); rebuildServicesDatalist();
-        renderPeriodSelect(); renderFilterPeriodSelect(); renderDoctorSelects(); renderDashboard(); renderRecords(); renderPatients();
-        renderDoctorsSettings(); renderLabs(); renderServices(); renderCompareRangeOptions(); renderCompareChart();
+        if(Array.isArray(data.expenses)) expenses = data.expenses;
+        if(Array.isArray(data.inventoryItems)) inventoryItems = data.inventoryItems;
+        if(Array.isArray(data.inventoryTx)) inventoryTx = data.inventoryTx;
+        if(Array.isArray(data.treatmentPlans)) treatmentPlans = data.treatmentPlans;
+        if(Array.isArray(data.notifications)) notifications = data.notifications;
+        if(Array.isArray(data.auditLog)) auditLog = data.auditLog;
+        const results = [
+          await saveEntries(), await saveDoctors(), await savePatients(), await saveSettings(),
+          await saveLabs({ noReload:true }), await saveServices(), await saveAdjustments(),
+          await saveExpenses(), await saveInventoryItems(), await saveInventoryTx(), await saveTreatmentPlans(), await saveNotifications(),
+          await saveBlob(K.audit, auditLog, true)
+        ];
+        if(results.some(r=>!r)){ toast('الاستعادة ما كملتش بالكامل — بعض الأقسام ما اتحفظتش. راجع الاتصال وحاول تاني'); }
+        renderAll();
         document.getElementById('topbarSub').textContent = 'عدد العمليات المسجلة: ' + entries.length;
-        toast('تم استعادة النسخة الاحتياطية بنجاح');
+        if(!results.some(r=>!r)) toast('تم استعادة النسخة الاحتياطية بنجاح');
         logAction('استعادة نسخة احتياطية من ملف');
       }catch(err){ console.error(err); toast('تعذر قراءة الملف، تأكد إنه ملف نسخة احتياطية صحيح'); }
       inputEl.value = '';
