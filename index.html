@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta name="app-build" content="20261117-0803">
+<meta name="app-build" content="20261118-0416">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#070707">
@@ -349,7 +349,7 @@
   #printReceipt{display:none;}
   @media print{
     html, body{ height:auto !important; margin:0; padding:0; background:#fff !important; }
-    #splashScreen, #authScreen, #setupScreen, #app, .toast{ display:none !important; }
+    #splashScreen, #authScreen, #setupScreen, #app, .toast, #updateBanner, #planModal, #labImportModal, #pendingBanner{ display:none !important; }
     #printReceipt{
       display:block !important;
       position:static; width:100%;
@@ -1184,7 +1184,7 @@ window.__firestoreClinicId = '';
 
   async function logAction(action){
     if(currentUser && currentUser.role==='lab') return;
-    auditLog.unshift({ ts: new Date().toISOString(), user: currentUser?currentUser.name:'—', role: currentUser?currentUser.role:'', action });
+    auditLog.unshift({ ts: new Date().toISOString(), user: currentUser?currentUser.name:'—', uid: currentUser?(currentUser.uid||currentUser.id||''):'', role: currentUser?currentUser.role:'', action });
     if(auditLog.length>300) auditLog = auditLog.slice(0,300);
     try{ await window.storage.set(K.audit, JSON.stringify(auditLog), SHARED); }catch(e){ console.error(e); }
   }
@@ -1395,6 +1395,8 @@ window.__firestoreClinicId = '';
       if(!labsData.invoices) labsData.invoices = [];
       return;
     }
+    const role0 = currentUser ? currentUser.role : '';
+    if(!['manager','doctor','lab'].includes(role0)){ labsData = empty(); labsSnap = {}; return; }
     const data = empty();
     const snap = {};
     try{
@@ -2280,10 +2282,10 @@ window.__firestoreClinicId = '';
     let wasEdit = false;
     if(editingId){
       const idx = entries.findIndex(x=>x.id===editingId);
-      if(idx>-1) entries[idx] = Object.assign({id:editingId}, data);
+      if(idx>-1) entries[idx] = Object.assign({ id: editingId }, applyEntryAudit(data, entries[idx]));
       wasEdit = true;
     } else {
-      entries.unshift(Object.assign({id: genId()}, data));
+      entries.unshift(Object.assign({ id: genId() }, applyEntryAudit(data, null)));
     }
 
     if(!(await saveEntries())){
@@ -2343,7 +2345,8 @@ window.__firestoreClinicId = '';
 
   async function deleteEntry(id){
     const removed = entries.find(x=>x.id===id);
-    if(removed && !confirm(`تأكيد حذف إيصال ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م؟ الحذف نهائي.`)) return;
+    const linkedCount = removed ? entries.filter(x=>x.groupId===removed.id).length : 0;
+    if(removed && !confirm(`تأكيد حذف إيصال ${removed.patient} · ${removed.proc} · ${fmt(removed.paid)} ج.م؟ الحذف نهائي.` + (linkedCount ? `\n\nتنبيه: فيه ${linkedCount} إيصال مرتبط بالإجراء ده، وهيفضلوا بدون أصل (المتبقي هيتأثر).` : ''))) return;
     const snapDel = JSON.stringify(entries);
     entries = entries.filter(x=>x.id!==id);
     if(!(await saveEntries())){ entries = JSON.parse(snapDel); renderRecords(); renderPatients(); return; }
@@ -2626,6 +2629,28 @@ window.__firestoreClinicId = '';
   }
 
   // ---------- Records ----------
+  // ---------- Audit fields on receipts ----------
+  const ENTRY_AUDIT_FIELDS = ['date','patient','medNum','receipt','doctor','type','proc','value','discount','paid'];
+  const ENTRY_FIELD_LABELS = { date:'التاريخ', patient:'المريض', medNum:'الرقم الطبي', receipt:'الإيصال', doctor:'الطبيب', type:'النوع', proc:'الإجراء', value:'القيمة', discount:'الخصم', paid:'المدفوع' };
+  function actorInfo(){ return { name: currentUser ? currentUser.name : '—', uid: currentUser ? (currentUser.uid || currentUser.id || '') : '' }; }
+  // يضيف منفّذ العملية تلقائيًا، ولو تعديل يحتفظ بالقيم السابقة (آخر ١٠ تعديلات) ويحافظ على الربط بالإجراء السابق
+  function applyEntryAudit(newData, oldEntry){
+    const who = actorInfo(), now = new Date().toISOString();
+    if(!oldEntry) return Object.assign({}, newData, { createdBy: who.name, createdByUid: who.uid, createdAt: now });
+    const out = Object.assign({}, newData, { createdBy: oldEntry.createdBy, createdByUid: oldEntry.createdByUid, createdAt: oldEntry.createdAt });
+    if(oldEntry.groupId && !out.groupId) out.groupId = oldEntry.groupId;
+    const changed = ENTRY_AUDIT_FIELDS.filter(f => String(oldEntry[f] ?? '') !== String(newData[f] ?? ''));
+    if(changed.length){
+      const before = {}; changed.forEach(f=>{ before[f] = oldEntry[f]; });
+      out.updatedBy = who.name; out.updatedByUid = who.uid; out.updatedAt = now;
+      out.history = (oldEntry.history || []).concat([{ at: now, by: who.name, byUid: who.uid, before }]).slice(-10);
+    } else {
+      if(oldEntry.updatedBy){ out.updatedBy = oldEntry.updatedBy; out.updatedByUid = oldEntry.updatedByUid; out.updatedAt = oldEntry.updatedAt; }
+      if(oldEntry.history) out.history = oldEntry.history;
+    }
+    return out;
+  }
+
   function buildRecordCard(e){
     const remaining = e.value - (e.discount||0) - e.paid;
     const div = document.createElement('div');
@@ -2645,6 +2670,8 @@ window.__firestoreClinicId = '';
         <span>المدفوع <b>${fmt(e.paid)}</b></span>
         <span>المتبقي <b>${fmt(remaining)}</b></span>
       </div>
+      ${(e.createdBy||e.updatedBy) ? `<div class="stat-sub" style="margin-top:6px;">${e.createdBy?('سجّله: '+escapeHtml(e.createdBy)):''}${e.updatedBy?(' · آخر تعديل: '+escapeHtml(e.updatedBy)+' '+escapeHtml((e.updatedAt||'').slice(0,10))):''}</div>` : ''}
+      ${(e.history && e.history.length) ? `<details style="margin-top:4px;"><summary class="stat-sub" style="cursor:pointer;">سجل التعديلات (${e.history.length})</summary>${e.history.slice().reverse().map(h=>`<div class="stat-sub">${escapeHtml((h.at||'').slice(0,16).replace('T',' '))} — ${escapeHtml(h.by||'')}: ${Object.keys(h.before||{}).map(k=>escapeHtml(ENTRY_FIELD_LABELS[k]||k)+' كان '+escapeHtml(String(h.before[k]))).join('، ')}</div>`).join('')}</details>` : ''}
       <div class="record-foot">
         <div class="record-doc">${escapeHtml(e.doctor||'')}</div>
         <div class="record-actions">
@@ -4850,6 +4877,7 @@ window.__firestoreClinicId = '';
         id: genId(), date: dateStr, patient: patientName, patientId: p.id, medNum: '',
         receipt: receipt, doctor: doctorChoice, type: guessType(proc),
         proc: proc || 'مستورد من ملف Excel', value: value, discount: 0, paid: paid,
+        createdBy: (currentUser?currentUser.name:'—') + ' (استيراد Excel)', createdByUid: currentUser?(currentUser.uid||currentUser.id||''):'', createdAt: new Date().toISOString(),
       });
       imported++;
     });
@@ -4893,7 +4921,8 @@ window.__firestoreClinicId = '';
     const rows = scoped.slice().sort((a,b)=>a.date<b.date?-1:1).map(e=>({
       'التاريخ': e.date, 'اسم المريض': e.patient, 'الرقم الطبي الموحد': e.medNum, 'رقم الايصال': e.receipt,
       'الطبيب': e.doctor, 'النوع': e.type, 'الاجراء': e.proc, 'القيمة': e.value, 'الخصم': e.discount||0,
-      'المدفوع': e.paid, 'المتبقي': e.value - (e.discount||0) - e.paid
+      'المدفوع': e.paid, 'المتبقي': e.value - (e.discount||0) - e.paid,
+      'سجّله': e.createdBy||'', 'تاريخ التسجيل': (e.createdAt||'').slice(0,16).replace('T',' '), 'آخر تعديل بواسطة': e.updatedBy||''
     }));
     const ws = sheetWithHeader(rows, selectedPeriod);
     const wb = XLSX.utils.book_new();
